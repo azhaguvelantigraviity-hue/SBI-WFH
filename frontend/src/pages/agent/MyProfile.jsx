@@ -1,0 +1,157 @@
+import React, { useState } from 'react';
+import { SectionHeader } from '../../components/ui/SectionHeader';
+import { Card } from '../../components/ui/Card';
+import { Input } from '../../components/ui/Input';
+import { Button } from '../../components/ui/Button';
+import { useAuth } from '../../context/AuthContext';
+import { usersApi } from '../../api/usersApi';
+import { useToast } from '../../context/ToastContext';
+import { cn } from '../../utils/cn';
+
+export function MyProfilePage() {
+  const { auth, setAuth } = useAuth();
+  const { addToast } = useToast();
+  
+  const [form, setForm] = useState({
+    name: auth?.user?.name || '',
+    mobile: auth?.user?.mobile || '',
+    email: auth?.user?.email || '',
+    password: ''
+  });
+
+  const [saving, setSaving] = useState(false);
+
+  const handleUpdate = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const payload = { ...form };
+      if (!payload.password) delete payload.password; // don't send empty password
+
+      const res = await usersApi.updateUser(auth.user.id, payload);
+      
+      if (res.success) {
+        addToast('success', 'Profile Updated', 'Your profile has been updated successfully.');
+        setForm(prev => ({ ...prev, password: '' }));
+        // In a real app, you might want to update the auth context user data here as well
+      }
+    } catch (err) {
+      addToast('error', 'Update Failed', 'Could not update profile.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const getInitials = (name) => {
+    if (!name) return 'SP';
+    return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+  };
+
+  return (
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-6xl mx-auto">
+      <SectionHeader title="My Profile" />
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        
+        {/* Profile Edit Panel */}
+        <Card className="p-8">
+          <div className="flex flex-col items-center mb-8">
+            <div className="w-24 h-24 rounded-full bg-gradient-to-tr from-accent to-purple-500 flex items-center justify-center text-3xl font-bold text-white shadow-lg mb-4">
+              {getInitials(auth?.user?.name)}
+            </div>
+            <h2 className="text-xl font-bold text-text-primary dark:text-text-dark-primary">{auth?.user?.name}</h2>
+            <p className="text-sm text-text-muted mt-1">Employee ID: {auth?.user?.employee_id || 'EMP001'}</p>
+            <div className="mt-3 px-3 py-1 bg-success/10 text-success text-[10px] font-bold uppercase tracking-wider rounded-full flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-success"></span>
+              Active
+            </div>
+          </div>
+
+          <form onSubmit={handleUpdate} className="space-y-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <Input 
+                label="Full Name" 
+                value={form.name} 
+                onChange={(e) => setForm({...form, name: e.target.value})} 
+              />
+              <Input 
+                label="Mobile" 
+                value={form.mobile} 
+                onChange={(e) => setForm({...form, mobile: e.target.value})} 
+              />
+            </div>
+            
+            <Input 
+              label="Email" 
+              type="email"
+              value={form.email} 
+              onChange={(e) => setForm({...form, email: e.target.value})} 
+              disabled // Usually email isn't easily editable by agent
+            />
+
+            <Input 
+              label="New Password" 
+              type="password"
+              placeholder="Leave blank to keep current"
+              value={form.password} 
+              onChange={(e) => setForm({...form, password: e.target.value})} 
+            />
+
+            <div className="pt-4">
+              <Button type="submit" disabled={saving}>
+                {saving ? 'Updating...' : 'Update Profile'}
+              </Button>
+            </div>
+          </form>
+        </Card>
+
+        {/* Performance Summary Panel */}
+        <Card title="Performance Summary" className="p-8">
+          <div className="mt-6 space-y-8">
+            
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="font-medium text-text-secondary dark:text-text-dark-secondary">Total Calls This Month</span>
+                <span className="font-bold">156</span>
+              </div>
+              <div className="w-full bg-background-dark/10 rounded-full h-1.5">
+                <div className="bg-purple-500 h-1.5 rounded-full" style={{ width: '65%' }}></div>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="font-medium text-text-secondary dark:text-text-dark-secondary">Leads Converted</span>
+                <span className="font-bold">82%</span>
+              </div>
+              <div className="w-full bg-background-dark/10 rounded-full h-1.5">
+                <div className="bg-success h-1.5 rounded-full" style={{ width: '82%' }}></div>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="font-medium text-text-secondary dark:text-text-dark-secondary">QD Approval Rate</span>
+                <span className="font-bold">90%</span>
+              </div>
+              <div className="w-full bg-background-dark/10 rounded-full h-1.5">
+                <div className="bg-warning h-1.5 rounded-full" style={{ width: '90%' }}></div>
+              </div>
+            </div>
+
+            <div className="mt-12 pt-8 border-t border-border-light dark:border-border-dark">
+              <p className="text-[10px] font-bold text-text-muted uppercase tracking-wider mb-1">Join Date</p>
+              <p className="font-mono text-lg text-text-primary dark:text-text-dark-primary">
+                {auth?.user?.createdAt 
+                  ? new Date(auth.user.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })
+                  : '01 January 2025'}
+              </p>
+            </div>
+
+          </div>
+        </Card>
+
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,2338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SalesForce Pro — WFH Portal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:15px;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+body{font-family:'Instrument Sans',sans-serif;transition:background .25s,color .25s;min-height:100vh}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{border-radius:99px}
+input,select,textarea,button{font-family:inherit}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback, createContext, useContext } = React;
+
+// ═══════════════════════════════════════════════════════════
+// THEME SYSTEM
+// ═══════════════════════════════════════════════════════════
+const ThemeContext = createContext();
+
+const themes = {
+  dark: {
+    name: 'dark',
+    bg:        '#0D0D10',
+    bg2:       '#131318',
+    bg3:       '#1A1A22',
+    bg4:       '#22222E',
+    card:      '#16161F',
+    cardBorder:'#252530',
+    border:    '#252530',
+    border2:   '#32323F',
+    text:      '#F2F0FF',
+    text2:     '#A09CB8',
+    text3:     '#5E5A75',
+    accent:    '#7B5EA7',
+    accentL:   '#9B7DC7',
+    accentGlow:'rgba(123,94,167,0.2)',
+    green:     '#2ECC8F',
+    greenBg:   'rgba(46,204,143,0.1)',
+    red:       '#E85D75',
+    redBg:     'rgba(232,93,117,0.1)',
+    amber:     '#F0A500',
+    amberBg:   'rgba(240,165,0,0.1)',
+    blue:      '#4A9EFF',
+    blueBg:    'rgba(74,158,255,0.1)',
+    purple:    '#B06AFF',
+    purpleBg:  'rgba(176,106,255,0.1)',
+    teal:      '#2EC4B6',
+    tealBg:    'rgba(46,196,182,0.1)',
+    scrollThumb:'#32323F',
+    shadow:    '0 8px 32px rgba(0,0,0,0.5)',
+    shadowSm:  '0 2px 12px rgba(0,0,0,0.4)',
+    inputBg:   '#1A1A22',
+    sidebarW:  '256px',
+  },
+  light: {
+    name: 'light',
+    bg:        '#F7F6FC',
+    bg2:       '#FFFFFF',
+    bg3:       '#F0EEF8',
+    bg4:       '#E8E5F5',
+    card:      '#FFFFFF',
+    cardBorder:'#E4E1F0',
+    border:    '#E4E1F0',
+    border2:   '#CCC9DE',
+    text:      '#1A1828',
+    text2:     '#5E5A75',
+    text3:     '#9996B0',
+    accent:    '#6B46C1',
+    accentL:   '#7C3AED',
+    accentGlow:'rgba(107,70,193,0.15)',
+    green:     '#16A34A',
+    greenBg:   'rgba(22,163,74,0.08)',
+    red:       '#DC2626',
+    redBg:     'rgba(220,38,38,0.08)',
+    amber:     '#D97706',
+    amberBg:   'rgba(217,119,6,0.08)',
+    blue:      '#2563EB',
+    blueBg:    'rgba(37,99,235,0.08)',
+    purple:    '#7C3AED',
+    purpleBg:  'rgba(124,58,237,0.08)',
+    teal:      '#0D9488',
+    tealBg:    'rgba(13,148,136,0.08)',
+    scrollThumb:'#CCC9DE',
+    shadow:    '0 4px 24px rgba(0,0,0,0.08)',
+    shadowSm:  '0 2px 8px rgba(0,0,0,0.06)',
+    inputBg:   '#F7F6FC',
+    sidebarW:  '256px',
+  }
+};
+
+function ThemeProvider({ children }) {
+  const [theme, setTheme] = useState('dark');
+  const t = themes[theme];
+
+  useEffect(() => {
+    document.body.style.background = t.bg;
+    document.body.style.color = t.text;
+    document.querySelector('::-webkit-scrollbar-thumb, style') &&
+    Object.assign(document.documentElement.style, {
+      '--scroll-thumb': t.scrollThumb,
+    });
+    const style = document.getElementById('dyn-scroll') || document.createElement('style');
+    style.id = 'dyn-scroll';
+    style.textContent = `::-webkit-scrollbar-thumb { background: ${t.scrollThumb}; }`;
+    document.head.appendChild(style);
+  }, [theme, t]);
+
+  return (
+    <ThemeContext.Provider value={{ theme, setTheme, t }}>
+      {children}
+    </ThemeContext.Provider>
+  );
+}
+
+const useTheme = () => useContext(ThemeContext);
+
+// ═══════════════════════════════════════════════════════════
+// TOAST SYSTEM
+// ═══════════════════════════════════════════════════════════
+const ToastContext = createContext();
+
+function ToastProvider({ children }) {
+  const [toasts, setToasts] = useState([]);
+  const add = useCallback((type, title, msg) => {
+    const id = Math.random().toString(36).slice(2);
+    setToasts(p => [...p, { id, type, title, msg }]);
+    setTimeout(() => setToasts(p => p.filter(t => t.id !== id)), 3800);
+  }, []);
+  return (
+    <ToastContext.Provider value={{ add }}>
+      {children}
+      <ToastContainer toasts={toasts} onRemove={id => setToasts(p => p.filter(t => t.id !== id))} />
+    </ToastContext.Provider>
+  );
+}
+
+const useToast = () => useContext(ToastContext);
+
+function ToastContainer({ toasts, onRemove }) {
+  const { t } = useTheme();
+  if (!toasts.length) return null;
+  const icons = { success: '✓', error: '✕', info: 'i', warning: '⚠' };
+  const colors = { success: t.green, error: t.red, info: t.blue, warning: t.amber };
+  return (
+    <div style={{ position:'fixed', bottom:24, right:24, zIndex:9999, display:'flex', flexDirection:'column', gap:8 }}>
+      {toasts.map(toast => (
+        <div key={toast.id} style={{
+          background: t.card, border: `1px solid ${t.border2}`,
+          borderLeft: `3px solid ${colors[toast.type]}`,
+          borderRadius: 10, padding: '12px 16px', minWidth: 280, maxWidth: 360,
+          boxShadow: t.shadow, display:'flex', gap:10, alignItems:'flex-start',
+          animation: 'slideLeft .3s cubic-bezier(.16,1,.3,1)',
+        }}>
+          <div style={{
+            width:22, height:22, borderRadius:'50%', background: colors[toast.type]+'22',
+            color: colors[toast.type], display:'flex', alignItems:'center', justifyContent:'center',
+            fontSize:11, fontWeight:700, flexShrink:0, marginTop:1,
+          }}>{icons[toast.type]}</div>
+          <div style={{ flex:1 }}>
+            <div style={{ fontSize:13, fontWeight:600, color:t.text }}>{toast.title}</div>
+            {toast.msg && <div style={{ fontSize:12, color:t.text2, marginTop:2 }}>{toast.msg}</div>}
+          </div>
+          <button onClick={() => onRemove(toast.id)} style={{ background:'none', border:'none', color:t.text3, cursor:'pointer', fontSize:14, lineHeight:1 }}>×</button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// DESIGN PRIMITIVES
+// ═══════════════════════════════════════════════════════════
+function Card({ children, style, pad = 20, hover = false }) {
+  const { t } = useTheme();
+  const [hov, setHov] = useState(false);
+  return (
+    <div onMouseEnter={() => hover && setHov(true)} onMouseLeave={() => hover && setHov(false)} style={{
+      background: t.card, border: `1px solid ${hov ? t.border2 : t.border}`,
+      borderRadius: 14, padding: pad, transition: 'border-color .2s, transform .2s, box-shadow .2s',
+      transform: hov ? 'translateY(-2px)' : 'none',
+      boxShadow: hov ? t.shadow : 'none',
+      ...style
+    }}>{children}</div>
+  );
+}
+
+function Button({ children, variant = 'primary', size = 'md', onClick, disabled, style, icon }) {
+  const { t } = useTheme();
+  const [hov, setHov] = useState(false);
+  const sz = { sm: { py:6, px:12, fs:12 }, md: { py:8, px:16, fs:13 }, lg: { py:10, px:22, fs:14 } }[size];
+  const vars = {
+    primary: { bg: hov ? t.accentL : t.accent, color: '#fff', border: 'none', shadow: hov ? `0 4px 20px ${t.accentGlow}` : 'none' },
+    ghost:   { bg: hov ? t.bg3 : 'transparent', color: t.text2, border: `1px solid ${t.border}`, shadow: 'none' },
+    danger:  { bg: hov ? t.redBg+'60' : t.redBg, color: t.red, border: `1px solid ${t.red}30`, shadow: 'none' },
+    success: { bg: hov ? t.greenBg+'60' : t.greenBg, color: t.green, border: `1px solid ${t.green}30`, shadow: 'none' },
+    secondary:{ bg: hov ? t.bg4 : t.bg3, color: t.text2, border: `1px solid ${t.border}`, shadow: 'none' },
+  }[variant];
+  return (
+    <button onClick={onClick} disabled={disabled}
+      onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+      style={{
+        display:'inline-flex', alignItems:'center', gap:6,
+        padding: `${sz.py}px ${sz.px}px`, fontSize: sz.fs, fontWeight:600,
+        borderRadius:8, cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? .5 : 1,
+        transition:'all .18s', fontFamily:'inherit', whiteSpace:'nowrap',
+        ...vars, ...style
+      }}>{icon && <span style={{fontSize:sz.fs+1}}>{icon}</span>}{children}</button>
+  );
+}
+
+function Badge({ label, color = 'default' }) {
+  const { t } = useTheme();
+  const map = {
+    new:         { bg: t.blueBg,   text: t.blue,   dot: t.blue },
+    assigned:    { bg: t.purpleBg, text: t.purple,  dot: t.purple },
+    in_progress: { bg: t.amberBg,  text: t.amber,   dot: t.amber },
+    eligible:    { bg: t.greenBg,  text: t.green,   dot: t.green },
+    not_eligible:{ bg: t.redBg,    text: t.red,     dot: t.red },
+    qd_pending:  { bg: t.amberBg,  text: t.amber,   dot: t.amber },
+    qd_submitted:{ bg: t.tealBg,   text: t.teal,    dot: t.teal },
+    dispatched:  { bg: t.greenBg,  text: t.green,   dot: t.green },
+    closed:      { bg: t.bg3,      text: t.text3,   dot: t.text3 },
+    active:      { bg: t.greenBg,  text: t.green,   dot: t.green },
+    suspended:   { bg: t.redBg,    text: t.red,     dot: t.red },
+    salaried:    { bg: t.blueBg,   text: t.blue,    dot: t.blue },
+    self_employed:{ bg: t.tealBg,  text: t.teal,    dot: t.teal },
+    paid:        { bg: t.greenBg,  text: t.green,   dot: t.green },
+    pending:     { bg: t.amberBg,  text: t.amber,   dot: t.amber },
+    connected:   { bg: t.greenBg,  text: t.green,   dot: t.green },
+    not_connected:{ bg: t.redBg,   text: t.red,     dot: t.red },
+  };
+  const c = map[color] || map[label?.toLowerCase()?.replace(' ','_')] || { bg: t.bg3, text: t.text3, dot: t.text3 };
+  return (
+    <span style={{
+      display:'inline-flex', alignItems:'center', gap:5,
+      background: c.bg, color: c.text,
+      padding:'3px 9px', borderRadius:99, fontSize:11, fontWeight:600,
+    }}>
+      <span style={{ width:5, height:5, borderRadius:'50%', background:c.dot, flexShrink:0 }} />
+      {label}
+    </span>
+  );
+}
+
+function Input({ label, value, onChange, placeholder, type='text', style, mono, required, hint }) {
+  const { t } = useTheme();
+  const [focused, setFocused] = useState(false);
+  return (
+    <div style={{ ...style }}>
+      {label && <label style={{ display:'block', fontSize:11, fontWeight:600, color:t.text3, textTransform:'uppercase', letterSpacing:'.06em', marginBottom:6 }}>{label}{required && <span style={{color:t.red}}> *</span>}</label>}
+      <input
+        type={type} value={value} onChange={e => onChange(e.target.value)}
+        placeholder={placeholder}
+        onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
+        style={{
+          width:'100%', background: t.inputBg, color: t.text,
+          border: `1.5px solid ${focused ? t.accent : t.border}`,
+          borderRadius:8, padding:'9px 12px', fontSize:13,
+          fontFamily: mono ? "'JetBrains Mono', monospace" : 'inherit',
+          outline:'none', transition:'border-color .18s',
+          boxShadow: focused ? `0 0 0 3px ${t.accentGlow}` : 'none',
+        }}
+      />
+      {hint && <div style={{ fontSize:11, color:t.text3, marginTop:4 }}>{hint}</div>}
+    </div>
+  );
+}
+
+function Select({ label, value, onChange, options, style }) {
+  const { t } = useTheme();
+  const [focused, setFocused] = useState(false);
+  return (
+    <div style={style}>
+      {label && <label style={{ display:'block', fontSize:11, fontWeight:600, color:t.text3, textTransform:'uppercase', letterSpacing:'.06em', marginBottom:6 }}>{label}</label>}
+      <select
+        value={value} onChange={e => onChange(e.target.value)}
+        onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
+        style={{
+          width:'100%', background: t.inputBg, color: t.text,
+          border: `1.5px solid ${focused ? t.accent : t.border}`,
+          borderRadius:8, padding:'9px 12px', fontSize:13, outline:'none',
+          transition:'border-color .18s', cursor:'pointer',
+          boxShadow: focused ? `0 0 0 3px ${t.accentGlow}` : 'none',
+        }}
+      >
+        {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+      </select>
+    </div>
+  );
+}
+
+function Stat({ label, value, delta, color = 'accent', icon }) {
+  const { t } = useTheme();
+  const clr = { accent: t.accent, green: t.green, red: t.red, amber: t.amber, blue: t.blue, teal: t.teal }[color] || t.accent;
+  return (
+    <Card hover style={{ position:'relative', overflow:'hidden' }}>
+      <div style={{ position:'absolute', top:0, left:0, right:0, height:2, background: `linear-gradient(90deg, ${clr}, ${clr}66)` }} />
+      <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between' }}>
+        <div>
+          <div style={{ fontSize:11, fontWeight:600, color:t.text3, textTransform:'uppercase', letterSpacing:'.07em', marginBottom:10 }}>{label}</div>
+          <div style={{ fontFamily:"'Fraunces', serif", fontSize:32, fontWeight:700, color:clr, lineHeight:1 }}>{value}</div>
+          {delta && <div style={{ fontSize:11, color: delta.startsWith('+') ? t.green : t.red, marginTop:6, display:'flex', alignItems:'center', gap:3 }}>
+            <span>{delta.startsWith('+') ? '↑' : '↓'}</span> {delta} vs last week
+          </div>}
+        </div>
+        {icon && <div style={{ fontSize:28, opacity:.15 }}>{icon}</div>}
+      </div>
+    </Card>
+  );
+}
+
+function Table({ columns, rows, onRowClick }) {
+  const { t } = useTheme();
+  const [hov, setHov] = useState(null);
+  return (
+    <div style={{ overflowX:'auto' }}>
+      <table style={{ width:'100%', borderCollapse:'collapse', fontSize:13 }}>
+        <thead>
+          <tr style={{ borderBottom:`2px solid ${t.border}` }}>
+            {columns.map(c => (
+              <th key={c.key} style={{ textAlign:'left', padding:'10px 14px', fontSize:11, fontWeight:600, color:t.text3, textTransform:'uppercase', letterSpacing:'.07em', whiteSpace:'nowrap' }}>{c.label}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, i) => (
+            <tr key={i} onMouseEnter={() => setHov(i)} onMouseLeave={() => setHov(null)}
+              onClick={() => onRowClick?.(row)}
+              style={{ borderBottom:`1px solid ${t.border}`, background: hov===i ? t.bg3 : 'transparent', cursor: onRowClick ? 'pointer' : 'default', transition:'background .12s' }}>
+              {columns.map(c => (
+                <td key={c.key} style={{ padding:'11px 14px', verticalAlign:'middle', color: c.muted ? t.text3 : t.text }}>
+                  {c.render ? c.render(row[c.key], row) : row[c.key]}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {rows.length === 0 && (
+        <div style={{ textAlign:'center', padding:'40px 20px', color:t.text3 }}>
+          <div style={{ fontSize:28, marginBottom:8 }}>○</div>
+          <div style={{ fontSize:13 }}>No records found</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Modal({ open, onClose, title, children, footer, width = 520 }) {
+  const { t } = useTheme();
+  if (!open) return null;
+  return (
+    <div onClick={e => e.target === e.currentTarget && onClose()} style={{
+      position:'fixed', inset:0, background:'rgba(0,0,0,.6)', backdropFilter:'blur(8px)',
+      display:'flex', alignItems:'center', justifyContent:'center', zIndex:200, padding:20,
+      animation:'fadeIn .2s',
+    }}>
+      <div style={{
+        background:t.card, border:`1px solid ${t.border2}`, borderRadius:16,
+        width:'100%', maxWidth:width, maxHeight:'90vh', overflowY:'auto',
+        boxShadow:'0 32px 80px rgba(0,0,0,.5)',
+        animation:'slideUp .25s cubic-bezier(.16,1,.3,1)',
+      }}>
+        <div style={{ padding:'20px 24px 16px', borderBottom:`1px solid ${t.border}`, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+          <div style={{ fontFamily:"'Fraunces', serif", fontSize:18, fontWeight:600, color:t.text }}>{title}</div>
+          <button onClick={onClose} style={{ background:'none', border:'none', color:t.text3, cursor:'pointer', fontSize:20, lineHeight:1, borderRadius:4, padding:'2px 4px' }}>×</button>
+        </div>
+        <div style={{ padding:'20px 24px' }}>{children}</div>
+        {footer && <div style={{ padding:'14px 24px', borderTop:`1px solid ${t.border}`, display:'flex', gap:8, justifyContent:'flex-end' }}>{footer}</div>}
+      </div>
+    </div>
+  );
+}
+
+function Tabs({ tabs, active, onChange }) {
+  const { t } = useTheme();
+  return (
+    <div style={{ display:'flex', gap:2, background:t.bg3, padding:3, borderRadius:10, width:'fit-content' }}>
+      {tabs.map(tab => (
+        <button key={tab.value} onClick={() => onChange(tab.value)} style={{
+          padding:'7px 16px', borderRadius:8, fontSize:12, fontWeight:600, cursor:'pointer', border:'none',
+          background: active === tab.value ? (t.name === 'dark' ? t.card : '#fff') : 'transparent',
+          color: active === tab.value ? t.text : t.text3,
+          boxShadow: active === tab.value ? t.shadowSm : 'none',
+          transition:'all .18s', whiteSpace:'nowrap',
+        }}>{tab.label}</button>
+      ))}
+    </div>
+  );
+}
+
+function ProgressBar({ value, color = 'accent', height = 5 }) {
+  const { t } = useTheme();
+  const clr = { accent: t.accent, green: t.green, amber: t.amber, red: t.red, blue: t.blue, teal: t.teal }[color] || t.accent;
+  return (
+    <div style={{ height, background:t.bg3, borderRadius:99, overflow:'hidden' }}>
+      <div style={{ height:'100%', width:`${Math.min(100, value)}%`, background:clr, borderRadius:99, transition:'width .6s cubic-bezier(.16,1,.3,1)' }} />
+    </div>
+  );
+}
+
+function Avatar({ name, size = 36, colors: cs }) {
+  const { t } = useTheme();
+  const pairs = [
+    [t.accent, t.accentL], [t.green, t.teal], [t.red, t.amber],
+    [t.blue, t.purple], [t.teal, t.blue], [t.purple, t.red],
+  ];
+  const idx   = (name?.charCodeAt(0) || 0) % pairs.length;
+  const [c1, c2] = cs || pairs[idx];
+  const initials = name?.split(' ').map(n => n[0]).slice(0,2).join('') || '??';
+  return (
+    <div style={{
+      width:size, height:size, borderRadius:'50%',
+      background: `linear-gradient(135deg, ${c1}, ${c2})`,
+      display:'flex', alignItems:'center', justifyContent:'center',
+      fontSize: size * .34, fontWeight:700, color:'#fff', flexShrink:0,
+      fontFamily:"'Fraunces', serif",
+    }}>{initials}</div>
+  );
+}
+
+function SectionHeader({ title, subtitle, action }) {
+  const { t } = useTheme();
+  return (
+    <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:24 }}>
+      <div>
+        <h2 style={{ fontFamily:"'Fraunces', serif", fontSize:26, fontWeight:600, color:t.text, lineHeight:1.2 }}>{title}</h2>
+        {subtitle && <p style={{ fontSize:13, color:t.text3, marginTop:5 }}>{subtitle}</p>}
+      </div>
+      {action}
+    </div>
+  );
+}
+
+function Divider() {
+  const { t } = useTheme();
+  return <div style={{ height:1, background:t.border, margin:'16px 0' }} />;
+}
+
+function InfoRow({ label, value, mono }) {
+  const { t } = useTheme();
+  return (
+    <div style={{ display:'flex', alignItems:'center', padding:'9px 14px', background:t.bg3, borderRadius:8, marginBottom:6 }}>
+      <div style={{ width:130, fontSize:11, fontWeight:600, color:t.text3, textTransform:'uppercase', letterSpacing:'.06em', flexShrink:0 }}>{label}</div>
+      <div style={{ flex:1, fontSize:13, color:t.text, fontFamily: mono ? "'JetBrains Mono', monospace" : 'inherit' }}>{value}</div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// SEED DATA
+// ═══════════════════════════════════════════════════════════
+const SEED = {
+  users: [
+    { id:'u1', employee_id:'EMP001', name:'Arjun Kumar',  email:'arjun@sf.com',  mobile:'9876543210', role:'sales_person', status:'active',    leads:34, dispatched:28 },
+    { id:'u2', employee_id:'EMP002', name:'Priya Sharma', email:'priya@sf.com',  mobile:'8765432109', role:'sales_person', status:'active',    leads:28, dispatched:22 },
+    { id:'u3', employee_id:'EMP003', name:'Ravi Patel',   email:'ravi@sf.com',   mobile:'7654321098', role:'sales_person', status:'active',    leads:22, dispatched:19 },
+    { id:'u4', employee_id:'EMP004', name:'Meena Nair',   email:'meena@sf.com',  mobile:'9543210987', role:'sales_person', status:'active',    leads:18, dispatched:14 },
+    { id:'u5', employee_id:'EMP005', name:'Kiran Raj',    email:'kiran@sf.com',  mobile:'6543219876', role:'sales_person', status:'suspended', leads:12, dispatched:8  },
+    { id:'u6', employee_id:'EMP006', name:'Deepa Rao',    email:'deepa@sf.com',  mobile:'9876501234', role:'sales_person', status:'active',    leads:15, dispatched:11 },
+  ],
+  leads: [
+    { id:'l1', lead_number:'L0001', customer_name:'Ravi Kumar',   mobile:'9876543210', pincode:'600001', status:'eligible',     assigned_to:'u1', agent_name:'Arjun Kumar',  created_at:'2025-06-15', updated_at:'Today 10:24' },
+    { id:'l2', lead_number:'L0002', customer_name:'Sunita Devi',  mobile:'8765432109', pincode:'400001', status:'qd_submitted', assigned_to:'u2', agent_name:'Priya Sharma', created_at:'2025-06-15', updated_at:'Today 09:15' },
+    { id:'l3', lead_number:'L0003', customer_name:'Mohan Lal',    mobile:'7654321098', pincode:'110001', status:'not_eligible', assigned_to:'u3', agent_name:'Ravi Patel',   created_at:'2025-06-15', updated_at:'Today 08:50' },
+    { id:'l4', lead_number:'L0004', customer_name:'Anjali Singh', mobile:'9543210987', pincode:'500001', status:'dispatched',   assigned_to:'u1', agent_name:'Arjun Kumar',  created_at:'2025-06-14', updated_at:'Yesterday' },
+    { id:'l5', lead_number:'L0005', customer_name:'Kiran Bala',   mobile:'6543219876', pincode:'560001', status:'in_progress',  assigned_to:'u4', agent_name:'Meena Nair',   created_at:'2025-06-16', updated_at:'Today 11:02' },
+    { id:'l6', lead_number:'L0006', customer_name:'Deepa Rao',    mobile:'9876501234', pincode:'600002', status:'new',          assigned_to:null,  agent_name:'—',            created_at:'2025-06-16', updated_at:'Today 12:00' },
+    { id:'l7', lead_number:'L0007', customer_name:'Suresh Menon', mobile:'8901234567', pincode:'682001', status:'new',          assigned_to:null,  agent_name:'—',            created_at:'2025-06-16', updated_at:'Today 12:00' },
+    { id:'l8', lead_number:'L0008', customer_name:'Radha K.',     mobile:'7890123456', pincode:'700001', status:'assigned',     assigned_to:'u2', agent_name:'Priya Sharma', created_at:'2025-06-16', updated_at:'Today 12:30' },
+  ],
+  calls: [
+    { id:'c1', customer_name:'Ravi Kumar',   mobile:'9876543210', agent:'Arjun Kumar',  status:'connected',     duration:'5:24', lead_status:'eligible',     time:'10:24 AM' },
+    { id:'c2', customer_name:'Sunita Devi',  mobile:'8765432109', agent:'Priya Sharma', status:'connected',     duration:'8:02', lead_status:'qd_submitted', time:'09:15 AM' },
+    { id:'c3', customer_name:'Mohan Lal',    mobile:'7654321098', agent:'Ravi Patel',   status:'connected',     duration:'2:11', lead_status:'not_eligible', time:'08:50 AM' },
+    { id:'c4', customer_name:'Kiran Bala',   mobile:'6543219876', agent:'Meena Nair',   status:'not_connected', duration:'—',    lead_status:'in_progress',  time:'11:02 AM' },
+    { id:'c5', customer_name:'Anjali Singh', mobile:'9543210987', agent:'Arjun Kumar',  status:'connected',     duration:'6:18', lead_status:'dispatched',   time:'08:30 AM' },
+  ],
+  qd: [
+    { id:'q1', customer_name:'Sunita Devi',  mobile:'8765432109', agent:'Priya Sharma', employment_type:'salaried',      status:'pending',   submitted:'Today 09:15',   docs:2 },
+    { id:'q2', customer_name:'Ganesh Babu',  mobile:'6789012345', agent:'Arjun Kumar',  employment_type:'self_employed', status:'pending',   submitted:'Today 08:30',   docs:1 },
+    { id:'q3', customer_name:'Anjali Singh', mobile:'9543210987', agent:'Arjun Kumar',  employment_type:'salaried',      status:'dispatched',submitted:'Yesterday',     docs:2 },
+    { id:'q4', customer_name:'Priya Kumari', mobile:'8876543210', agent:'Priya Sharma', employment_type:'self_employed', status:'dispatched',submitted:'2 days ago',    docs:3 },
+    { id:'q5', customer_name:'Ramesh T.',    mobile:'9765432100', agent:'Ravi Patel',   employment_type:'salaried',      status:'pending',   submitted:'Today 10:00',   docs:2 },
+  ],
+  incentives: [
+    { agent:'Arjun Kumar',  dispatched:28, gross:28000, tds:2800, net:25200, status:'paid',    month:'June 2025' },
+    { agent:'Priya Sharma', dispatched:22, gross:22000, tds:2200, net:19800, status:'paid',    month:'June 2025' },
+    { agent:'Ravi Patel',   dispatched:19, gross:19000, tds:1900, net:17100, status:'pending', month:'June 2025' },
+    { agent:'Meena Nair',   dispatched:14, gross:14000, tds:1400, net:12600, status:'pending', month:'June 2025' },
+    { agent:'Kiran Raj',    dispatched:8,  gross:8000,  tds:800,  net:7200,  status:'paid',    month:'June 2025' },
+    { agent:'Deepa Rao',    dispatched:11, gross:11000, tds:1100, net:9900,  status:'pending', month:'June 2025' },
+  ],
+};
+
+// ═══════════════════════════════════════════════════════════
+// SIDEBAR
+// ═══════════════════════════════════════════════════════════
+const ADMIN_NAV = [
+  { section:'Overview',  items:[{ id:'dashboard',    icon:'⌂', label:'Dashboard' }] },
+  { section:'Team',      items:[{ id:'salespersons', icon:'⊞', label:'Sales Persons', badge:6 }] },
+  { section:'Leads',     items:[
+    { id:'leads',    icon:'◎', label:'All Leads', badge:142 },
+    { id:'upload',   icon:'↑', label:'Upload Datasheet' },
+    { id:'assign',   icon:'⊏', label:'Assign Leads', badge:23, badgeColor:'amber' },
+    { id:'pipeline', icon:'⊡', label:'Pipeline View' },
+  ]},
+  { section:'Quality',   items:[{ id:'qd',          icon:'✓', label:'QD Management', badge:12 }] },
+  { section:'Analytics', items:[
+    { id:'reports',    icon:'⊞', label:'Reports' },
+    { id:'incentives', icon:'◈', label:'Incentives' },
+    { id:'calls',      icon:'☎', label:'Call Tracking' },
+  ]},
+  { section:'System',    items:[{ id:'settings',    icon:'⚙', label:'Settings' }] },
+];
+
+const SALES_NAV = [
+  { section:'Overview',  items:[{ id:'sp-dashboard',  icon:'⌂', label:'Dashboard' }] },
+  { section:'My Leads',  items:[
+    { id:'sp-leads',  icon:'◎', label:'Assigned Leads', badge:18 },
+    { id:'sp-call',   icon:'☎', label:'Make a Call' },
+    { id:'sp-verify', icon:'◉', label:'Verification' },
+    { id:'sp-qd',     icon:'✓', label:'QD Form', badge:3, badgeColor:'amber' },
+  ]},
+  { section:'Personal',  items:[
+    { id:'sp-docs',       icon:'⊟', label:'Documents' },
+    { id:'sp-incentives', icon:'◈', label:'My Incentives' },
+    { id:'sp-profile',    icon:'○', label:'Profile' },
+  ]},
+];
+
+function Sidebar({ page, onPage, role, user, onLogout }) {
+  const { t, theme, setTheme } = useTheme();
+  const nav = role === 'admin' ? ADMIN_NAV : SALES_NAV;
+
+  return (
+    <aside style={{
+      width: t.sidebarW, background: t.bg2, borderRight:`1px solid ${t.border}`,
+      display:'flex', flexDirection:'column', position:'fixed', top:0, left:0, height:'100vh',
+      zIndex:100,
+    }}>
+      {/* Logo */}
+      <div style={{ padding:'20px 20px 14px', borderBottom:`1px solid ${t.border}` }}>
+        <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+          <div style={{
+            width:36, height:36, borderRadius:10,
+            background:`linear-gradient(135deg, ${t.accent}, ${t.accentL})`,
+            display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0,
+          }}>
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <path d="M9 2L16 6V12L9 16L2 12V6L9 2Z" stroke="white" strokeWidth="1.5" fill="none"/>
+              <circle cx="9" cy="9" r="2" fill="white"/>
+            </svg>
+          </div>
+          <div>
+            <div style={{ fontFamily:"'Fraunces', serif", fontSize:15, fontWeight:600, color:t.text, lineHeight:1.1 }}>SalesForce Pro</div>
+            <div style={{ fontSize:10, color:t.text3, fontWeight:500, letterSpacing:'.04em' }}>WFH Portal</div>
+          </div>
+        </div>
+        <div style={{
+          marginTop:12, padding:'6px 10px', background:t.bg3, borderRadius:8,
+          display:'flex', alignItems:'center', gap:7,
+        }}>
+          <div style={{ width:6, height:6, borderRadius:'50%', background:t.green, boxShadow:`0 0 6px ${t.green}`, animation:'pulse 2s infinite' }} />
+          <span style={{ fontSize:11, fontFamily:"'JetBrains Mono', monospace", color: role === 'admin' ? t.accent : t.green, fontWeight:600 }}>
+            {role === 'admin' ? 'ADMINISTRATOR' : 'SALES AGENT'}
+          </span>
+        </div>
+      </div>
+
+      {/* Nav */}
+      <nav style={{ flex:1, overflowY:'auto', padding:'10px 12px' }}>
+        {nav.map(section => (
+          <div key={section.section} style={{ marginBottom:20 }}>
+            <div style={{ fontSize:10, fontWeight:700, color:t.text3, textTransform:'uppercase', letterSpacing:'.1em', padding:'0 8px', marginBottom:4 }}>
+              {section.section}
+            </div>
+            {section.items.map(item => {
+              const active = page === item.id;
+              return (
+                <button key={item.id} onClick={() => onPage(item.id)} style={{
+                  width:'100%', display:'flex', alignItems:'center', gap:9,
+                  padding:'8px 10px', borderRadius:8, cursor:'pointer', border:'none',
+                  background: active ? t.accentGlow : 'transparent',
+                  color: active ? t.text : t.text2,
+                  fontSize:13, fontWeight: active ? 600 : 400,
+                  transition:'all .15s', textAlign:'left', position:'relative',
+                  marginBottom:2,
+                }}>
+                  {active && <div style={{ position:'absolute', left:-12, top:'50%', transform:'translateY(-50%)', width:3, height:18, background:t.accent, borderRadius:'0 3px 3px 0' }} />}
+                  <span style={{ width:18, textAlign:'center', fontSize:14, opacity: active ? 1 : .6 }}>{item.icon}</span>
+                  <span style={{ flex:1 }}>{item.label}</span>
+                  {item.badge && (
+                    <span style={{
+                      fontSize:10, fontWeight:700, padding:'2px 6px', borderRadius:99,
+                      background: item.badgeColor === 'amber' ? t.amberBg : t.redBg,
+                      color: item.badgeColor === 'amber' ? t.amber : t.red,
+                    }}>{item.badge}</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        ))}
+      </nav>
+
+      {/* Footer */}
+      <div style={{ borderTop:`1px solid ${t.border}`, padding:12 }}>
+        {/* Theme toggle */}
+        <div style={{ display:'flex', alignItems:'center', gap:8, padding:'6px 10px', background:t.bg3, borderRadius:8, marginBottom:8 }}>
+          <span style={{ fontSize:12, color:t.text3, flex:1, fontWeight:500 }}>Theme</span>
+          <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} style={{
+            display:'flex', alignItems:'center', gap:6, background: t.accent+'22', border:`1px solid ${t.accent}40`,
+            borderRadius:6, padding:'4px 10px', cursor:'pointer', color:t.accent, fontSize:11, fontWeight:600,
+          }}>
+            {theme === 'dark' ? '☀ Light' : '☾ Dark'}
+          </button>
+        </div>
+        {/* User */}
+        <div style={{ display:'flex', alignItems:'center', gap:8, padding:'6px 4px' }}>
+          <Avatar name={user.name} size={32} />
+          <div style={{ flex:1, minWidth:0 }}>
+            <div style={{ fontSize:12, fontWeight:600, color:t.text, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{user.name}</div>
+            <div style={{ fontSize:10, color:t.text3 }}>{user.role}</div>
+          </div>
+          <button onClick={onLogout} title="Logout" style={{ background:'none', border:'none', color:t.text3, cursor:'pointer', fontSize:14, padding:4, borderRadius:4, transition:'color .15s' }}>⏻</button>
+        </div>
+      </div>
+    </aside>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// TOPBAR
+// ═══════════════════════════════════════════════════════════
+function Topbar({ title, user }) {
+  const { t, theme, setTheme } = useTheme();
+  const [search, setSearch] = useState('');
+  const [notifOpen, setNotifOpen] = useState(false);
+
+  const NOTIFICATIONS = [
+    { icon:'✓', color: t.green, title:'QD Dispatched', msg:'Anjali Singh — Arjun Kumar', time:'2m' },
+    { icon:'↑', color: t.blue,  title:'15 leads uploaded', msg:'datasheet_june.xlsx', time:'18m' },
+    { icon:'✕', color: t.red,   title:'Verification failed', msg:'Mohan Lal — PAN duplicate', time:'34m' },
+    { icon:'✎', color: t.amber, title:'QD Submitted', msg:'Sunita Devi — Priya Sharma', time:'1h' },
+  ];
+
+  return (
+    <header style={{
+      height:60, background: t.bg2, borderBottom:`1px solid ${t.border}`,
+      display:'flex', alignItems:'center', padding:'0 24px', gap:12,
+      position:'sticky', top:0, zIndex:50,
+    }}>
+      <div style={{ flex:1, fontFamily:"'Fraunces', serif", fontSize:18, fontWeight:600, color:t.text }}>{title}</div>
+
+      {/* Search */}
+      <div style={{ display:'flex', alignItems:'center', gap:8, background:t.bg3, border:`1px solid ${t.border}`, borderRadius:8, padding:'6px 12px', width:220 }}>
+        <span style={{ color:t.text3, fontSize:12 }}>⊕</span>
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search…" style={{ background:'none', border:'none', outline:'none', color:t.text, fontSize:12, width:'100%' }} />
+      </div>
+
+      {/* Theme toggle (topbar) */}
+      <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} style={{
+        width:34, height:34, borderRadius:8, background:t.bg3, border:`1px solid ${t.border}`,
+        cursor:'pointer', color:t.text2, fontSize:14, display:'flex', alignItems:'center', justifyContent:'center',
+      }}>{theme === 'dark' ? '☀' : '☾'}</button>
+
+      {/* Notifications */}
+      <div style={{ position:'relative' }}>
+        <button onClick={() => setNotifOpen(!notifOpen)} style={{
+          width:34, height:34, borderRadius:8, background:t.bg3, border:`1px solid ${t.border}`,
+          cursor:'pointer', color:t.text2, fontSize:14, display:'flex', alignItems:'center', justifyContent:'center', position:'relative',
+        }}>
+          🔔
+          <div style={{ position:'absolute', top:6, right:6, width:7, height:7, borderRadius:'50%', background:t.red, border:`2px solid ${t.bg2}` }} />
+        </button>
+        {notifOpen && (
+          <div style={{
+            position:'absolute', top:42, right:0, width:320,
+            background:t.card, border:`1px solid ${t.border2}`, borderRadius:12,
+            boxShadow:t.shadow, overflow:'hidden', zIndex:200,
+          }}>
+            <div style={{ padding:'12px 16px', borderBottom:`1px solid ${t.border}`, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+              <span style={{ fontWeight:600, fontSize:13, color:t.text }}>Notifications</span>
+              <span style={{ fontSize:10, color:t.accent, cursor:'pointer', fontWeight:600 }}>Mark all read</span>
+            </div>
+            {NOTIFICATIONS.map((n, i) => (
+              <div key={i} style={{ padding:'10px 16px', borderBottom:`1px solid ${t.border}`, display:'flex', gap:10, alignItems:'flex-start', transition:'background .15s' }}>
+                <div style={{ width:26, height:26, borderRadius:'50%', background:n.color+'22', color:n.color, display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:700, flexShrink:0, marginTop:1 }}>{n.icon}</div>
+                <div style={{ flex:1 }}>
+                  <div style={{ fontSize:12, fontWeight:600, color:t.text }}>{n.title}</div>
+                  <div style={{ fontSize:11, color:t.text3, marginTop:1 }}>{n.msg}</div>
+                </div>
+                <div style={{ fontSize:10, color:t.text3, flexShrink:0 }}>{n.time}</div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <Avatar name={user.name} size={32} />
+    </header>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// PAGE: ADMIN DASHBOARD
+// ═══════════════════════════════════════════════════════════
+function AdminDashboard({ onNav }) {
+  const { t } = useTheme();
+  const barData = [65,80,55,90,70,45,30,78,62,85,72,95,58,68,88];
+
+  return (
+    <div>
+      <SectionHeader
+        title="Good morning, Admin 👋"
+        subtitle="Here's what's happening with your sales team today — June 16, 2025"
+      />
+
+      {/* Stats */}
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:16, marginBottom:24 }}>
+        <Stat label="Total Leads"    value="142"  delta="+12%"  color="accent" icon="◎" />
+        <Stat label="Eligible"       value="64"   delta="+8%"   color="green"  icon="✓" />
+        <Stat label="QD Dispatched"  value="38"   delta="+5%"   color="blue"   icon="↑" />
+        <Stat label="Total Incentives" value="₹94K" delta="+18%" color="amber"  icon="◈" />
+      </div>
+
+      <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr', gap:20, marginBottom:20 }}>
+        {/* Chart */}
+        <Card>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20 }}>
+            <div>
+              <div style={{ fontFamily:"'Fraunces', serif", fontSize:16, fontWeight:600, color:t.text }}>Lead Activity</div>
+              <div style={{ fontSize:12, color:t.text3, marginTop:2 }}>Last 15 days</div>
+            </div>
+            <div style={{ display:'flex', gap:6 }}>
+              {['Week','Month','Quarter'].map(p => (
+                <button key={p} style={{ padding:'4px 10px', borderRadius:6, fontSize:11, fontWeight:600, cursor:'pointer', border:'none', background: p==='Week' ? t.accentGlow : t.bg3, color: p==='Week' ? t.accent : t.text3 }}>{p}</button>
+              ))}
+            </div>
+          </div>
+          {/* Bar chart */}
+          <div style={{ display:'flex', alignItems:'flex-end', gap:6, height:120 }}>
+            {barData.map((h, i) => (
+              <div key={i} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:4 }}>
+                <div style={{
+                  width:'100%', borderRadius:'3px 3px 0 0',
+                  height:`${h}%`,
+                  background: i % 3 === 0 ? t.green : t.accent,
+                  opacity: .7, transition:'opacity .2s, transform .2s', cursor:'pointer',
+                }} onMouseEnter={e => e.target.style.opacity='1'}
+                  onMouseLeave={e => e.target.style.opacity='.7'} />
+                <div style={{ fontSize:9, color:t.text3 }}>{i+1}</div>
+              </div>
+            ))}
+          </div>
+          <Divider />
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:8 }}>
+            {[['New','28',t.blue],['In Progress','45',t.amber],['Eligible','64',t.green],['Closed','5',t.text3]].map(([l,v,c]) => (
+              <div key={l}>
+                <div style={{ fontSize:11, color:t.text3 }}>{l}</div>
+                <div style={{ fontFamily:"'Fraunces', serif", fontSize:20, fontWeight:700, color:c, marginTop:2 }}>{v}</div>
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        {/* Top Performers */}
+        <Card>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16 }}>
+            <div style={{ fontFamily:"'Fraunces', serif", fontSize:16, fontWeight:600, color:t.text }}>Top Performers</div>
+            <button onClick={() => onNav('reports')} style={{ fontSize:11, color:t.accent, background:'none', border:'none', cursor:'pointer', fontWeight:600 }}>View all →</button>
+          </div>
+          {SEED.users.slice(0,4).map((u, i) => (
+            <div key={u.id} style={{ display:'flex', alignItems:'center', gap:10, marginBottom:14 }}>
+              <div style={{ width:20, textAlign:'center', fontFamily:"'JetBrains Mono', monospace", fontSize:11, color:t.text3, fontWeight:600 }}>#{i+1}</div>
+              <Avatar name={u.name} size={30} />
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{ fontSize:12, fontWeight:600, color:t.text, marginBottom:4 }}>{u.name}</div>
+                <ProgressBar value={(u.dispatched/28)*100} color={['accent','green','amber','teal'][i]} height={4} />
+              </div>
+              <div style={{ fontFamily:"'JetBrains Mono', monospace", fontSize:12, color:t.text2, flexShrink:0 }}>{u.dispatched}</div>
+            </div>
+          ))}
+        </Card>
+      </div>
+
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:20 }}>
+        {/* Recent Leads */}
+        <Card>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:14 }}>
+            <div style={{ fontFamily:"'Fraunces', serif", fontSize:16, fontWeight:600, color:t.text }}>Recent Leads</div>
+            <button onClick={() => onNav('leads')} style={{ fontSize:11, color:t.accent, background:'none', border:'none', cursor:'pointer', fontWeight:600 }}>View all →</button>
+          </div>
+          <Table
+            columns={[
+              { key:'customer_name', label:'Customer', render:(v,r) => <div style={{display:'flex',alignItems:'center',gap:8}}><Avatar name={v} size={24}/><span style={{fontWeight:600}}>{v}</span></div> },
+              { key:'status', label:'Status', render:v => <Badge label={v.replace('_',' ')} color={v} /> },
+              { key:'agent_name', label:'Agent', muted:true },
+            ]}
+            rows={SEED.leads.slice(0,5)}
+          />
+        </Card>
+
+        {/* Activity */}
+        <Card>
+          <div style={{ fontFamily:"'Fraunces', serif", fontSize:16, fontWeight:600, color:t.text, marginBottom:16 }}>Live Activity</div>
+          {[
+            { icon:'✓', color:t.green,  title:'QD Dispatched',          sub:'Anjali Singh · Arjun Kumar',   time:'2m ago' },
+            { icon:'↑', color:t.blue,   title:'15 leads imported',       sub:'datasheet_june.xlsx',          time:'18m' },
+            { icon:'✕', color:t.red,    title:'Verification failed',      sub:'Mohan Lal · PAN duplicate',    time:'34m' },
+            { icon:'✎', color:t.amber,  title:'QD Submitted',            sub:'Sunita Devi · Priya Sharma',   time:'1h' },
+            { icon:'⊕', color:t.purple, title:'New agent added — Deepa', sub:'Admin',                        time:'3h' },
+          ].map((a, i, arr) => (
+            <div key={i} style={{ display:'flex', gap:12, paddingBottom: i<arr.length-1 ? 14:0 }}>
+              <div style={{ display:'flex', flexDirection:'column', alignItems:'center' }}>
+                <div style={{ width:26, height:26, borderRadius:'50%', background:a.color+'18', color:a.color, display:'flex', alignItems:'center', justifyContent:'center', fontSize:10, fontWeight:700, flexShrink:0 }}>{a.icon}</div>
+                {i<arr.length-1 && <div style={{ width:1, flex:1, background:t.border, marginTop:4 }} />}
+              </div>
+              <div style={{ flex:1, paddingBottom: i<arr.length-1 ? 8:0 }}>
+                <div style={{ fontSize:12, fontWeight:600, color:t.text }}>{a.title}</div>
+                <div style={{ fontSize:11, color:t.text3, marginTop:2 }}>{a.sub}</div>
+              </div>
+              <div style={{ fontSize:10, color:t.text3, flexShrink:0, marginTop:2 }}>{a.time}</div>
+            </div>
+          ))}
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// PAGE: SALES PERSONS
+// ═══════════════════════════════════════════════════════════
+function SalesPersonsPage() {
+  const { t } = useTheme();
+  const { add: toast } = useToast();
+  const [search, setSearch] = useState('');
+  const [filter, setFilter] = useState('all');
+  const [showAdd, setShowAdd] = useState(false);
+  const [form, setForm] = useState({ name:'', email:'', mobile:'', employee_id:'', role:'sales_person' });
+
+  const filtered = SEED.users.filter(u => {
+    if (filter === 'active' && u.status !== 'active') return false;
+    if (filter === 'suspended' && u.status !== 'suspended') return false;
+    if (search && !u.name.toLowerCase().includes(search.toLowerCase()) && !u.email.includes(search)) return false;
+    return true;
+  });
+
+  return (
+    <div>
+      <SectionHeader
+        title="Sales Persons"
+        subtitle="Manage your WFH sales team"
+        action={<Button icon="+" onClick={() => setShowAdd(true)}>Add Sales Person</Button>}
+      />
+
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:16, marginBottom:24 }}>
+        <Stat label="Total Staff"    value="6"  color="accent" icon="⊞" />
+        <Stat label="Active"         value="5"  color="green"  icon="○" />
+        <Stat label="Suspended"      value="1"  color="red"    icon="✕" />
+        <Stat label="New This Month" value="2"  color="blue"   icon="+" />
+      </div>
+
+      <Card>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16, flexWrap:'wrap', gap:10 }}>
+          <Tabs tabs={[{value:'all',label:'All (6)'},{value:'active',label:'Active (5)'},{value:'suspended',label:'Suspended (1)'}]} active={filter} onChange={setFilter} />
+          <div style={{ display:'flex', gap:8 }}>
+            <Input value={search} onChange={setSearch} placeholder="Search staff…" style={{ width:200 }} />
+            <Button variant="ghost" icon="↓">Export</Button>
+          </div>
+        </div>
+        <Table
+          columns={[
+            { key:'name', label:'Employee', render:(v,r) => (
+              <div style={{display:'flex',alignItems:'center',gap:10}}>
+                <Avatar name={v} size={34} />
+                <div>
+                  <div style={{fontWeight:600,fontSize:13,color:t.text}}>{v}</div>
+                  <div style={{fontSize:11,color:t.text3}}>{r.email}</div>
+                </div>
+              </div>
+            )},
+            { key:'employee_id', label:'ID', muted:true, render:v => <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:12}}>{v}</span> },
+            { key:'mobile',  label:'Mobile', muted:true, render:v => <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:12}}>{v}</span> },
+            { key:'role',    label:'Role',   render:v => <span style={{fontSize:12,color:t.text2,textTransform:'capitalize'}}>{v.replace('_',' ')}</span> },
+            { key:'leads',      label:'Leads',      render:v => <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:12}}>{v}</span> },
+            { key:'dispatched', label:'Dispatched',  render:v => <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:12,color:t.green,fontWeight:600}}>{v}</span> },
+            { key:'status', label:'Status', render:v => <Badge label={v} color={v} /> },
+            { key:'id', label:'Actions', render:(v,r) => (
+              <div style={{display:'flex',gap:6}}>
+                <Button variant="ghost" size="sm" onClick={() => toast('info','Edit','Opening edit form for '+r.name)}>Edit</Button>
+                {r.status === 'active'
+                  ? <Button variant="danger" size="sm" onClick={() => toast('warning','Suspended',r.name+' suspended')}>Suspend</Button>
+                  : <Button variant="success" size="sm" onClick={() => toast('success','Activated',r.name+' activated')}>Activate</Button>
+                }
+              </div>
+            )},
+          ]}
+          rows={filtered}
+        />
+      </Card>
+
+      <Modal open={showAdd} onClose={() => setShowAdd(false)} title="Add Sales Person"
+        footer={<><Button variant="ghost" onClick={() => setShowAdd(false)}>Cancel</Button><Button onClick={() => { setShowAdd(false); toast('success','Agent Added','New team member created'); }}>Add Person</Button></>}
+      >
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>
+          <Input label="Full Name" value={form.name} onChange={v => setForm(p=>({...p,name:v}))} placeholder="Enter full name" required style={{gridColumn:'1/-1'}} />
+          <Input label="Employee ID" value={form.employee_id} onChange={v => setForm(p=>({...p,employee_id:v}))} placeholder="EMP007" mono />
+          <Input label="Mobile" value={form.mobile} onChange={v => setForm(p=>({...p,mobile:v}))} placeholder="9876543210" mono />
+          <Input label="Email" value={form.email} onChange={v => setForm(p=>({...p,email:v}))} placeholder="agent@company.com" type="email" style={{gridColumn:'1/-1'}} />
+          <Select label="Role" value={form.role} onChange={v => setForm(p=>({...p,role:v}))} options={[{value:'sales_person',label:'Sales Person'},{value:'team_lead',label:'Team Lead'}]} style={{gridColumn:'1/-1'}} />
+          <Input label="Initial Password" value="" onChange={() => {}} placeholder="Default: Sales@123" type="password" hint="Agent can change after first login" style={{gridColumn:'1/-1'}} />
+        </div>
+      </Modal>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// PAGE: LEADS
+// ═══════════════════════════════════════════════════════════
+function LeadsPage() {
+  const { t } = useTheme();
+  const { add: toast } = useToast();
+  const [tab, setTab]     = useState('all');
+  const [search, setSearch] = useState('');
+  const [selected, setSelected] = useState(null);
+
+  const STATUS_TABS = [
+    {value:'all', label:'All (142)'},{value:'new',label:'New (28)'},{value:'assigned',label:'Assigned (45)'},
+    {value:'eligible',label:'Eligible (64)'},{value:'qd_pending',label:'QD Pending (12)'},{value:'dispatched',label:'Dispatched (38)'},
+  ];
+
+  const filtered = SEED.leads.filter(l => {
+    if (tab !== 'all' && !l.status.startsWith(tab.replace('_',' '))) {
+      if (tab !== 'qd_pending' && l.status !== tab) return false;
+      if (tab === 'qd_pending' && !l.status.includes('qd')) return false;
+    }
+    if (search && !l.customer_name.toLowerCase().includes(search.toLowerCase()) && !l.mobile.includes(search)) return false;
+    return true;
+  });
+
+  return (
+    <div>
+      <SectionHeader
+        title="Lead Management"
+        subtitle="142 total leads across all agents"
+        action={<div style={{display:'flex',gap:8}}><Button variant="ghost" icon="↓">Export CSV</Button><Button icon="+">Upload Leads</Button></div>}
+      />
+
+      <div style={{ marginBottom:20 }}>
+        <Tabs tabs={STATUS_TABS} active={tab} onChange={setTab} />
+      </div>
+
+      <Card>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16, gap:10, flexWrap:'wrap' }}>
+          <div style={{ display:'flex', gap:8 }}>
+            <Input value={search} onChange={setSearch} placeholder="Search leads…" style={{width:220}} />
+            <Select value="" onChange={() => {}} options={[{value:'',label:'All Agents'},{value:'u1',label:'Arjun Kumar'},{value:'u2',label:'Priya Sharma'}]} style={{width:160}} />
+          </div>
+          <div style={{ display:'flex', gap:6 }}>
+            <Button variant="ghost" size="sm">Filter ▼</Button>
+            <Button variant="ghost" size="sm">Sort ↕</Button>
+          </div>
+        </div>
+        <Table
+          columns={[
+            { key:'lead_number', label:'#', muted:true, render:v => <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:11}}>{v}</span> },
+            { key:'customer_name', label:'Customer', render:(v,r) => (
+              <div style={{display:'flex',alignItems:'center',gap:8}}>
+                <Avatar name={v} size={26}/>
+                <span style={{fontWeight:600}}>{v}</span>
+              </div>
+            )},
+            { key:'mobile',  label:'Mobile',  muted:true, render:v=><span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:12}}>{v}</span> },
+            { key:'pincode', label:'Pincode', muted:true, render:v=><span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:12}}>{v}</span> },
+            { key:'agent_name', label:'Agent', muted:true, render:v=><span style={{fontSize:12}}>{v}</span> },
+            { key:'status', label:'Status', render:v=><Badge label={v.replace(/_/g,' ')} color={v} /> },
+            { key:'updated_at', label:'Updated', muted:true, render:v=><span style={{fontSize:12}}>{v}</span> },
+            { key:'id', label:'', render:(v,r) => <Button variant="ghost" size="sm" onClick={() => setSelected(r)}>View</Button> },
+          ]}
+          rows={filtered}
+          onRowClick={setSelected}
+        />
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginTop:16, paddingTop:16, borderTop:`1px solid ${t.border}` }}>
+          <div style={{ fontSize:12, color:t.text3 }}>Showing 1–{filtered.length} of 142 leads</div>
+          <div style={{ display:'flex', gap:6 }}>
+            {['← Prev','1','2','3','Next →'].map(p => (
+              <button key={p} style={{ padding:'5px 10px', borderRadius:6, fontSize:12, cursor:'pointer', border:`1px solid ${t.border}`, background: p==='1' ? t.accent : t.bg3, color: p==='1' ? '#fff' : t.text2, fontFamily:'inherit' }}>{p}</button>
+            ))}
+          </div>
+        </div>
+      </Card>
+
+      {/* Lead Detail Modal */}
+      <Modal open={!!selected} onClose={() => setSelected(null)} title={`Lead — ${selected?.customer_name}`} width={640}
+        footer={<><Button variant="ghost" onClick={() => setSelected(null)}>Close</Button><Button>Assign to Agent</Button></>}
+      >
+        {selected && (
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
+            <div>
+              <div style={{ fontSize:12, fontWeight:600, color:t.text3, textTransform:'uppercase', letterSpacing:'.06em', marginBottom:10 }}>Lead Details</div>
+              <InfoRow label="Lead #"   value={selected.lead_number} mono />
+              <InfoRow label="Name"     value={selected.customer_name} />
+              <InfoRow label="Mobile"   value={selected.mobile} mono />
+              <InfoRow label="Pincode"  value={selected.pincode} mono />
+              <InfoRow label="Status"   value={<Badge label={selected.status.replace(/_/g,' ')} color={selected.status} />} />
+              <InfoRow label="Agent"    value={selected.agent_name} />
+            </div>
+            <div>
+              <div style={{ fontSize:12, fontWeight:600, color:t.text3, textTransform:'uppercase', letterSpacing:'.06em', marginBottom:10 }}>Timeline</div>
+              {[
+                { t:'Lead Created',   d:'Today 08:00', done:true },
+                { t:'Assigned',       d:'Today 08:30', done:true },
+                { t:'Called',         d:'Today 10:20', done:['eligible','qd_submitted','dispatched'].includes(selected.status) },
+                { t:'Verified',       d:'Today 10:24', done:['eligible','qd_submitted','dispatched'].includes(selected.status) },
+                { t:'QD Submitted',   d:'—',           done:['qd_submitted','dispatched'].includes(selected.status) },
+                { t:'Dispatched',     d:'—',           done:selected.status==='dispatched' },
+              ].map((item, i, arr) => (
+                <div key={i} style={{ display:'flex', gap:10, paddingBottom: i<arr.length-1 ? 12:0 }}>
+                  <div style={{ display:'flex', flexDirection:'column', alignItems:'center' }}>
+                    <div style={{ width:10, height:10, borderRadius:'50%', background: item.done ? t.green : t.border2, flexShrink:0, marginTop:2 }} />
+                    {i<arr.length-1 && <div style={{ width:1, flex:1, background:t.border, marginTop:3 }} />}
+                  </div>
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontSize:12, fontWeight:600, color: item.done ? t.text : t.text3 }}>{item.t}</div>
+                    <div style={{ fontSize:11, color:t.text3 }}>{item.d}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </Modal>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// PAGE: UPLOAD DATASHEET
+// ═══════════════════════════════════════════════════════════
+function UploadPage() {
+  const { t } = useTheme();
+  const { add: toast } = useToast();
+  const [dragging, setDragging] = useState(false);
+  const [ocr, setOcr] = useState(null);
+  const [engine, setEngine] = useState('tesseract');
+  const [processing, setProcessing] = useState(false);
+  const fileRef = useRef();
+
+  const OCR_MOCK = [
+    { name:'Raju Sharma', mobile:'9876501001', pincode:'600001' },
+    { name:'Preethi K.',  mobile:'8765412001', pincode:'400001' },
+    { name:'Sunil Mehta', mobile:'7654301001', pincode:'560001' },
+    { name:'Kavitha R.',  mobile:'9543201001', pincode:'500001' },
+    { name:'Balu T.',     mobile:'6789001001', pincode:'600002' },
+  ];
+
+  const handleFile = () => {
+    setProcessing(true);
+    toast('info', 'Processing…', 'Running OCR on uploaded file');
+    setTimeout(() => { setOcr(OCR_MOCK); setProcessing(false); toast('success', 'OCR Complete', '5 records extracted'); }, 2000);
+  };
+
+  return (
+    <div>
+      <SectionHeader title="Upload Datasheet" subtitle="AI-powered OCR auto-extracts leads from images, PDFs, and Excel files" />
+
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:20 }}>
+        <div>
+          <Card style={{ marginBottom:16 }}>
+            <div style={{ fontFamily:"'Fraunces', serif", fontSize:16, fontWeight:600, color:t.text, marginBottom:14 }}>Upload File</div>
+            <div
+              onDragOver={e => { e.preventDefault(); setDragging(true); }}
+              onDragLeave={() => setDragging(false)}
+              onDrop={e => { e.preventDefault(); setDragging(false); handleFile(); }}
+              onClick={() => fileRef.current?.click()}
+              style={{
+                border:`2px dashed ${dragging ? t.accent : t.border2}`,
+                borderRadius:12, padding:'40px 20px', textAlign:'center', cursor:'pointer',
+                background: dragging ? t.accentGlow : t.bg3,
+                transition:'all .2s',
+              }}
+            >
+              <div style={{ fontSize:32, marginBottom:10, opacity:.5 }}>⊞</div>
+              <div style={{ fontSize:14, fontWeight:600, color:t.text2 }}>Click to upload or drag & drop</div>
+              <div style={{ fontSize:12, color:t.text3, marginTop:6 }}>PDF, PNG, JPG, XLSX, CSV • Max 20MB</div>
+              <input ref={fileRef} type="file" style={{ display:'none' }} onChange={handleFile} />
+            </div>
+            <div style={{ marginTop:16 }}>
+              <div style={{ fontSize:11, fontWeight:600, color:t.text3, textTransform:'uppercase', letterSpacing:'.06em', marginBottom:8 }}>OCR Engine</div>
+              <div style={{ display:'flex', gap:8 }}>
+                {[{v:'tesseract',l:'Tesseract'},{v:'google',l:'Google Vision'},{v:'aws',l:'AWS Textract'}].map(e => (
+                  <button key={e.v} onClick={() => setEngine(e.v)} style={{
+                    padding:'6px 12px', borderRadius:8, fontSize:11, fontWeight:600, cursor:'pointer',
+                    border:`1.5px solid ${engine===e.v ? t.accent : t.border}`,
+                    background: engine===e.v ? t.accentGlow : t.bg3,
+                    color: engine===e.v ? t.accent : t.text3,
+                    transition:'all .18s',
+                  }}>{e.l}</button>
+                ))}
+              </div>
+            </div>
+          </Card>
+
+          {processing && (
+            <Card>
+              <div style={{ display:'flex', alignItems:'center', gap:12, padding:'8px 0' }}>
+                <div style={{ width:20, height:20, borderRadius:'50%', border:`2px solid ${t.accent}`, borderTopColor:'transparent', animation:'spin 1s linear infinite' }} />
+                <div style={{ fontSize:13, color:t.text2 }}>Running OCR engine…</div>
+              </div>
+            </Card>
+          )}
+
+          {ocr && !processing && (
+            <Card>
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:14 }}>
+                <div style={{ fontFamily:"'Fraunces', serif", fontSize:16, fontWeight:600, color:t.text }}>Extracted Records</div>
+                <Badge label={`${ocr.length} records`} color="eligible" />
+              </div>
+              {ocr.map((r, i) => (
+                <div key={i} style={{ display:'flex', alignItems:'center', gap:10, padding:'9px 12px', background:t.bg3, borderRadius:8, marginBottom:6 }}>
+                  <Avatar name={r.name} size={28} />
+                  <div style={{ flex:1, fontSize:12, fontWeight:600, color:t.text }}>{r.name}</div>
+                  <div style={{ fontSize:11, fontFamily:"'JetBrains Mono',monospace", color:t.text3 }}>{r.mobile}</div>
+                  <div style={{ fontSize:11, fontFamily:"'JetBrains Mono',monospace", color:t.text3 }}>{r.pincode}</div>
+                  <div style={{ fontSize:12, cursor:'pointer', color:t.accent }}>✎</div>
+                </div>
+              ))}
+              <div style={{ display:'flex', gap:8, marginTop:14 }}>
+                <Button style={{ flex:1, justifyContent:'center' }} onClick={() => { setOcr(null); toast('success','Imported!','5 leads added to system'); }}>Import All Leads →</Button>
+                <Button variant="ghost" onClick={() => setOcr(null)}>Discard</Button>
+              </div>
+            </Card>
+          )}
+        </div>
+
+        <div>
+          <Card style={{ marginBottom:16 }}>
+            <div style={{ fontFamily:"'Fraunces', serif", fontSize:16, fontWeight:600, color:t.text, marginBottom:14 }}>Import History</div>
+            <Table
+              columns={[
+                { key:'file', label:'File' },
+                { key:'records', label:'Records', render:v=><span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:12}}>{v}</span> },
+                { key:'status', label:'Status', render:v=><Badge label={v} color={v==='Imported'?'eligible':'in_progress'} /> },
+                { key:'date', label:'Date', muted:true },
+              ]}
+              rows={[
+                { file:'datasheet_june.xlsx', records:45, status:'Imported', date:'Today' },
+                { file:'leads_may.pdf',        records:30, status:'Imported', date:'Yesterday' },
+                { file:'scan_photo.jpg',       records:12, status:'Processing', date:'2 days ago' },
+              ]}
+            />
+          </Card>
+          <Card>
+            <div style={{ fontFamily:"'Fraunces', serif", fontSize:16, fontWeight:600, color:t.text, marginBottom:14 }}>Manual Add Lead</div>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+              <Input label="Customer Name" value="" onChange={() => {}} placeholder="Full name" style={{gridColumn:'1/-1'}} />
+              <Input label="Mobile" value="" onChange={() => {}} placeholder="10-digit number" mono />
+              <Input label="Pincode" value="" onChange={() => {}} placeholder="6-digit pincode" mono />
+            </div>
+            <Button style={{ marginTop:14 }} onClick={() => toast('success','Lead Added','Manual lead created')}>Add Lead</Button>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// PAGE: ASSIGN LEADS
+// ═══════════════════════════════════════════════════════════
+function AssignPage() {
+  const { t } = useTheme();
+  const { add: toast } = useToast();
+  const [assignTo, setAssignTo] = useState('');
+  const [count, setCount] = useState('10');
+  const [selected, setSelected] = useState([]);
+
+  const unassigned = SEED.leads.filter(l => !l.assigned_to);
+
+  return (
+    <div>
+      <SectionHeader title="Assign Leads" subtitle="Distribute unassigned leads to your sales team" />
+      <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr', gap:20 }}>
+        <Card>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:14 }}>
+            <div style={{ fontFamily:"'Fraunces', serif", fontSize:16, fontWeight:600, color:t.text }}>Unassigned Leads ({unassigned.length})</div>
+            <button onClick={() => setSelected(selected.length === unassigned.length ? [] : unassigned.map(l=>l.id))} style={{ fontSize:12, color:t.accent, background:'none', border:'none', cursor:'pointer', fontWeight:600 }}>
+              {selected.length === unassigned.length ? 'Deselect All' : 'Select All'}
+            </button>
+          </div>
+          {unassigned.map(l => (
+            <div key={l.id} onClick={() => setSelected(p => p.includes(l.id) ? p.filter(i=>i!==l.id) : [...p,l.id])}
+              style={{ display:'flex', alignItems:'center', gap:12, padding:'10px 12px', background: selected.includes(l.id) ? t.accentGlow : t.bg3, border:`1px solid ${selected.includes(l.id)?t.accent:t.border}`, borderRadius:8, marginBottom:6, cursor:'pointer', transition:'all .15s' }}>
+              <div style={{ width:16, height:16, borderRadius:4, border:`1.5px solid ${selected.includes(l.id)?t.accent:t.border2}`, background: selected.includes(l.id)?t.accent:'transparent', display:'flex', alignItems:'center', justifyContent:'center', color:'#fff', fontSize:10, flexShrink:0 }}>
+                {selected.includes(l.id) && '✓'}
+              </div>
+              <Avatar name={l.customer_name} size={28} />
+              <div style={{ flex:1 }}>
+                <div style={{ fontSize:13, fontWeight:600, color:t.text }}>{l.customer_name}</div>
+                <div style={{ fontSize:11, color:t.text3, fontFamily:"'JetBrains Mono',monospace" }}>{l.mobile} • {l.pincode}</div>
+              </div>
+              <Badge label="new" color="new" />
+            </div>
+          ))}
+        </Card>
+
+        <div>
+          <Card style={{ marginBottom:16 }}>
+            <div style={{ fontFamily:"'Fraunces', serif", fontSize:16, fontWeight:600, color:t.text, marginBottom:14 }}>Quick Assign</div>
+            <Select label="Assign To" value={assignTo} onChange={setAssignTo}
+              options={[{value:'',label:'— Select Agent —'},...SEED.users.filter(u=>u.status==='active').map(u=>({value:u.id,label:`${u.name} (${u.leads} leads)`}))]}
+              style={{ marginBottom:12 }}
+            />
+            <Input label="Number of Leads" value={count} onChange={setCount} placeholder="e.g. 10" mono style={{ marginBottom:14 }} />
+            <Button style={{ width:'100%', justifyContent:'center' }} onClick={() => {
+              if (!assignTo) return toast('error','Select Agent','Please select a sales person');
+              toast('success','Assigned!',`${count} leads assigned to ${SEED.users.find(u=>u.id===assignTo)?.name}`);
+            }}>Assign Leads →</Button>
+          </Card>
+
+          <Card>
+            <div style={{ fontFamily:"'Fraunces', serif", fontSize:15, fontWeight:600, color:t.text, marginBottom:14 }}>Team Load</div>
+            {SEED.users.filter(u=>u.status==='active').map((u,i) => (
+              <div key={u.id} style={{ marginBottom:12 }}>
+                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:4 }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:7 }}>
+                    <Avatar name={u.name} size={22} />
+                    <span style={{ fontSize:12, color:t.text }}>{u.name.split(' ')[0]}</span>
+                  </div>
+                  <span style={{ fontSize:11, fontFamily:"'JetBrains Mono',monospace", color:t.text3 }}>{u.leads}</span>
+                </div>
+                <ProgressBar value={(u.leads/40)*100} color={['accent','green','amber','teal','blue'][i%5]} />
+              </div>
+            ))}
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// PAGE: PIPELINE
+// ═══════════════════════════════════════════════════════════
+function PipelinePage() {
+  const { t } = useTheme();
+  const COLS = [
+    { id:'new',          label:'New',          color:t.blue,   count:28, leads:[{n:'Deepa Rao',m:'600002'},{n:'Suresh Menon',m:'682001'},{n:'Radha K.',m:'700001'}] },
+    { id:'assigned',     label:'Assigned',     color:t.purple, count:45, leads:[{n:'Kiran Bala',m:'→ Meena'},{n:'Ganesh B.',m:'→ Arjun'}] },
+    { id:'in_progress',  label:'In Progress',  color:t.amber,  count:12, leads:[{n:'Uma Shankar',m:'Calling…'}] },
+    { id:'eligible',     label:'Eligible',     color:t.green,  count:64, leads:[{n:'Ravi Kumar',m:'PAN ✓'},{n:'Anjali Singh',m:'PAN ✓'}] },
+    { id:'qd_pending',   label:'QD Pending',   color:t.teal,   count:12, leads:[{n:'Sunita Devi',m:'Awaiting QD'}] },
+    { id:'dispatched',   label:'Dispatched',   color:t.accent, count:38, leads:[{n:'Anjali Singh',m:'✓ Today'},{n:'Priya K.',m:'✓ Yesterday'}] },
+    { id:'closed',       label:'Closed',       color:t.text3,  count:5,  leads:[{n:'Mohan Lal',m:'PAN dup.'}] },
+  ];
+
+  return (
+    <div>
+      <SectionHeader title="Lead Pipeline" subtitle="Kanban view of all lead statuses" action={<Button variant="ghost">⚙ Columns</Button>} />
+      <div style={{ display:'flex', gap:12, overflowX:'auto', paddingBottom:12 }}>
+        {COLS.map(col => (
+          <div key={col.id} style={{ minWidth:200, flexShrink:0 }}>
+            <div style={{ padding:'8px 12px', borderRadius:'8px 8px 0 0', background:col.color+'18', borderBottom:`2px solid ${col.color}`, display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:0 }}>
+              <span style={{ fontSize:11, fontWeight:700, color:col.color, textTransform:'uppercase', letterSpacing:'.06em' }}>{col.label}</span>
+              <span style={{ fontSize:11, fontFamily:"'JetBrains Mono',monospace", color:col.color, fontWeight:600 }}>{col.count}</span>
+            </div>
+            <div style={{ background:t.bg3, borderRadius:'0 0 8px 8px', padding:8, minHeight:140 }}>
+              {col.leads.map((lead, i) => (
+                <div key={i} style={{ background:t.card, border:`1px solid ${t.border}`, borderRadius:8, padding:'9px 11px', marginBottom:6, cursor:'pointer', transition:'all .15s' }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = col.color+'60'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = t.border; e.currentTarget.style.transform = 'none'; }}>
+                  <div style={{ fontSize:12, fontWeight:600, color:t.text }}>{lead.n}</div>
+                  <div style={{ fontSize:11, color:t.text3, marginTop:3 }}>{lead.m}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// PAGE: QD MANAGEMENT
+// ═══════════════════════════════════════════════════════════
+function QDPage() {
+  const { t } = useTheme();
+  const { add: toast } = useToast();
+  const [tab, setTab] = useState('pending');
+  const [viewQD, setViewQD] = useState(null);
+
+  return (
+    <div>
+      <SectionHeader title="QD Management" subtitle="Review and dispatch quality data submissions" />
+
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:16, marginBottom:24 }}>
+        <Stat label="Pending Review" value="3"  color="amber" icon="⊟" />
+        <Stat label="Approved"       value="38" color="green" icon="✓" />
+        <Stat label="Rejected"       value="5"  color="red"   icon="✕" />
+        <Stat label="Total"          value="46" color="accent" icon="⊞" />
+      </div>
+
+      <Card>
+        <div style={{ marginBottom:16 }}>
+          <Tabs tabs={[{value:'pending',label:'Pending (3)'},{value:'dispatched',label:'Dispatched (38)'},{value:'rejected',label:'Rejected (5)'}]} active={tab} onChange={setTab} />
+        </div>
+        <Table
+          columns={[
+            { key:'customer_name', label:'Lead', render:(v,r) => (
+              <div>
+                <div style={{fontWeight:600,fontSize:13}}>{v}</div>
+                <div style={{fontSize:11,color:t.text3,fontFamily:"'JetBrains Mono',monospace"}}>{r.mobile}</div>
+              </div>
+            )},
+            { key:'agent', label:'Agent', render:v=><span style={{fontSize:12}}>{v}</span> },
+            { key:'employment_type', label:'Type', render:v=><Badge label={v.replace('_',' ')} color={v} /> },
+            { key:'submitted', label:'Submitted', muted:true },
+            { key:'docs', label:'Docs', render:v=>(
+              <div style={{display:'flex',gap:6}}>
+                {'📄'.repeat(v).split('').slice(0,v).map((d,i) => <span key={i} title={i===0?'Payslip':'Bank Statement'} style={{cursor:'pointer',fontSize:16}}>{i===0?'📄':'🏦'}</span>)}
+              </div>
+            )},
+            { key:'status', label:'Actions', render:(v,r) => (
+              tab === 'pending' ? (
+                <div style={{display:'flex',gap:6}}>
+                  <Button variant="success" size="sm" onClick={() => toast('success','Dispatched!',r.customer_name+"'s QD dispatched")}>✓ Dispatch</Button>
+                  <Button variant="danger"  size="sm" onClick={() => toast('error','Rejected',r.customer_name+"'s QD rejected")}>✕ Reject</Button>
+                  <Button variant="ghost"   size="sm" onClick={() => setViewQD(r)}>View</Button>
+                </div>
+              ) : <Badge label={v} color={v} />
+            )},
+          ]}
+          rows={SEED.qd.filter(q => q.status === tab || (tab === 'pending' && q.status === 'pending'))}
+        />
+      </Card>
+
+      <Modal open={!!viewQD} onClose={() => setViewQD(null)} title="QD Submission Detail" width={560}
+        footer={viewQD?.status==='pending' ? (
+          <><Button variant="ghost" onClick={() => setViewQD(null)}>Close</Button>
+          <Button variant="danger" onClick={() => { setViewQD(null); toast('error','Rejected','QD rejected'); }}>✕ Reject</Button>
+          <Button variant="success" onClick={() => { setViewQD(null); toast('success','Dispatched!','QD dispatched, incentive created'); }}>✓ Dispatch</Button></>
+        ) : <Button variant="ghost" onClick={() => setViewQD(null)}>Close</Button>}
+      >
+        {viewQD && (
+          <div>
+            <InfoRow label="Customer"   value={viewQD.customer_name} />
+            <InfoRow label="Agent"      value={viewQD.agent} />
+            <InfoRow label="Employment" value={<Badge label={viewQD.employment_type.replace('_',' ')} color={viewQD.employment_type} />} />
+            <InfoRow label="Submitted"  value={viewQD.submitted} />
+            <InfoRow label="Documents"  value={`${viewQD.docs} file(s) uploaded`} />
+          </div>
+        )}
+      </Modal>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// PAGE: REPORTS
+// ═══════════════════════════════════════════════════════════
+function ReportsPage() {
+  const { t } = useTheme();
+  const barH = [60,75,50,88,70,40,95,65,78,55,82,100,72,60,88];
+
+  return (
+    <div>
+      <SectionHeader
+        title="Reports & Analytics"
+        subtitle="Comprehensive sales performance insights"
+        action={<div style={{display:'flex',gap:8}}>
+          <Select value="month" onChange={() => {}} options={[{value:'month',label:'This Month'},{value:'last',label:'Last Month'},{value:'q',label:'Last 3 Months'}]} style={{width:140}} />
+          <Button variant="ghost" icon="↓">Export PDF</Button>
+        </div>}
+      />
+
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:16, marginBottom:24 }}>
+        <Stat label="Total Calls"     value="1,284" color="accent" />
+        <Stat label="Connected"       value="847"   color="green"  />
+        <Stat label="Conversion Rate" value="45%"   color="amber"  />
+        <Stat label="Rejected Leads"  value="40"    color="red"    />
+      </div>
+
+      <div style={{ display:'grid', gridTemplateColumns:'3fr 2fr', gap:20, marginBottom:20 }}>
+        <Card>
+          <div style={{ fontFamily:"'Fraunces', serif", fontSize:16, fontWeight:600, color:t.text, marginBottom:18 }}>Daily Lead Report — June 2025</div>
+          <div style={{ display:'flex', alignItems:'flex-end', gap:5, height:150 }}>
+            {barH.map((h, i) => (
+              <div key={i} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:4 }}>
+                <div style={{ width:'100%', height:`${h}%`, borderRadius:'4px 4px 0 0', background: i%2===0 ? t.accent : t.green, opacity:.75, cursor:'pointer', transition:'opacity .15s' }}
+                  onMouseEnter={e => e.target.style.opacity='1'} onMouseLeave={e => e.target.style.opacity='.75'} />
+                <div style={{ fontSize:9, color:t.text3, fontFamily:"'JetBrains Mono',monospace" }}>{i+1}</div>
+              </div>
+            ))}
+          </div>
+          <Divider />
+          <div style={{ display:'flex', gap:16 }}>
+            <div style={{ display:'flex', alignItems:'center', gap:6 }}><div style={{ width:8, height:8, borderRadius:2, background:t.accent }} /><span style={{ fontSize:11, color:t.text3 }}>Total Leads</span></div>
+            <div style={{ display:'flex', alignItems:'center', gap:6 }}><div style={{ width:8, height:8, borderRadius:2, background:t.green }} /><span style={{ fontSize:11, color:t.text3 }}>Dispatched</span></div>
+          </div>
+        </Card>
+
+        <Card>
+          <div style={{ fontFamily:"'Fraunces', serif", fontSize:16, fontWeight:600, color:t.text, marginBottom:16 }}>Rejection Breakdown</div>
+          {[
+            { label:'PAN Duplicate',  val:22, pct:55, color:'red' },
+            { label:'Invalid Pincode',val:12, pct:30, color:'amber' },
+            { label:'Not Interested', val:4,  pct:10, color:'purple' },
+            { label:'Other',          val:2,  pct:5,  color:'teal' },
+          ].map(r => (
+            <div key={r.label} style={{ marginBottom:14 }}>
+              <div style={{ display:'flex', justifyContent:'space-between', fontSize:12, marginBottom:5 }}>
+                <span style={{ color:t.text }}>{r.label}</span>
+                <span style={{ color:t.text3, fontFamily:"'JetBrains Mono',monospace" }}>{r.val} ({r.pct}%)</span>
+              </div>
+              <ProgressBar value={r.pct} color={r.color} />
+            </div>
+          ))}
+        </Card>
+      </div>
+
+      <Card>
+        <div style={{ fontFamily:"'Fraunces', serif", fontSize:16, fontWeight:600, color:t.text, marginBottom:14 }}>Agent Performance</div>
+        <Table
+          columns={[
+            { key:'agent', label:'Agent', render:(v,r) => (
+              <div style={{display:'flex',alignItems:'center',gap:10}}>
+                <Avatar name={v} size={30}/>
+                <span style={{fontWeight:600}}>{v}</span>
+              </div>
+            )},
+            { key:'calls', label:'Calls', render:v=><span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:12}}>{v}</span> },
+            { key:'eligible', label:'Eligible', render:v=><span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:12}}>{v}</span> },
+            { key:'dispatched', label:'Dispatched', render:v=><span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:12,color:t.green,fontWeight:600}}>{v}</span> },
+            { key:'rate', label:'Rate', render:(v,r) => (
+              <div style={{display:'flex',alignItems:'center',gap:8}}>
+                <ProgressBar value={parseInt(v)} color="green" height={4} />
+                <span style={{fontSize:11,color:t.green,fontFamily:"'JetBrains Mono',monospace",flexShrink:0}}>{v}</span>
+              </div>
+            )},
+          ]}
+          rows={[
+            { agent:'Arjun Kumar',  calls:342, eligible:89, dispatched:28, rate:'82%' },
+            { agent:'Priya Sharma', calls:289, eligible:71, dispatched:22, rate:'76%' },
+            { agent:'Ravi Patel',   calls:241, eligible:62, dispatched:19, rate:'70%' },
+            { agent:'Meena Nair',   calls:198, eligible:48, dispatched:14, rate:'63%' },
+          ]}
+        />
+      </Card>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// PAGE: INCENTIVES
+// ═══════════════════════════════════════════════════════════
+function IncentivesPage() {
+  const { t } = useTheme();
+  const { add: toast } = useToast();
+
+  return (
+    <div>
+      <SectionHeader title="Incentive Tracker" subtitle="Incentives awarded for dispatched leads only"
+        action={<Button icon="↓">Export Payroll</Button>}
+      />
+
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:16, marginBottom:24 }}>
+        <Stat label="Total Paid"    value="₹83K" color="green" />
+        <Stat label="Pending"       value="₹11K" color="amber" />
+        <Stat label="This Month"    value="₹94K" color="accent" />
+        <Stat label="Avg Per Agent" value="₹20K" color="blue"  />
+      </div>
+
+      <Card>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16 }}>
+          <div style={{ fontFamily:"'Fraunces', serif", fontSize:16, fontWeight:600, color:t.text }}>Incentive Breakdown — June 2025</div>
+          <Select value="june" onChange={() => {}} options={[{value:'june',label:'June 2025'},{value:'may',label:'May 2025'},{value:'apr',label:'April 2025'}]} style={{width:140}} />
+        </div>
+        <Table
+          columns={[
+            { key:'agent', label:'Agent', render:(v,r) => (
+              <div style={{display:'flex',alignItems:'center',gap:10}}>
+                <Avatar name={v} size={30}/><span style={{fontWeight:600}}>{v}</span>
+              </div>
+            )},
+            { key:'dispatched', label:'Dispatched', render:v=><span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:12}}>{v}</span> },
+            { key:'gross', label:'Gross', render:v=><span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:12}}>₹{v.toLocaleString()}</span> },
+            { key:'tds',   label:'TDS (10%)', render:v=><span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:12,color:t.red}}>-₹{v.toLocaleString()}</span> },
+            { key:'net',   label:'Net Payable', render:v=><span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:13,color:t.green,fontWeight:700}}>₹{v.toLocaleString()}</span> },
+            { key:'status', label:'Status', render:(v,r) => <Badge label={v} color={v} /> },
+            { key:'agent', label:'', render:(v,r) => (
+              r.status === 'pending' && <Button variant="ghost" size="sm" onClick={() => toast('success','Marked Paid',v+" incentive marked as paid")}>Mark Paid</Button>
+            )},
+          ]}
+          rows={SEED.incentives}
+        />
+      </Card>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// PAGE: CALL TRACKING
+// ═══════════════════════════════════════════════════════════
+function CallsPage() {
+  const { t } = useTheme();
+  return (
+    <div>
+      <SectionHeader title="Call Tracking" subtitle="Monitor all sales calls across your team" />
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:16, marginBottom:24 }}>
+        <Stat label="Total Calls"    value="1,284" color="accent" />
+        <Stat label="Connected"      value="847"   color="green"  />
+        <Stat label="Not Connected"  value="437"   color="red"    />
+        <Stat label="Avg Duration"   value="4.2m"  color="amber"  />
+      </div>
+      <Card>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:14 }}>
+          <div style={{ fontFamily:"'Fraunces', serif", fontSize:16, fontWeight:600, color:t.text }}>Call Log</div>
+          <Button variant="ghost" size="sm" icon="↓">Export</Button>
+        </div>
+        <Table
+          columns={[
+            { key:'agent', label:'Agent', render:v=><span style={{fontWeight:600}}>{v}</span> },
+            { key:'customer_name', label:'Customer' },
+            { key:'mobile', label:'Mobile', render:v=><span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:12}}>{v}</span> },
+            { key:'duration', label:'Duration', render:v=><span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:12}}>{v}</span> },
+            { key:'status', label:'Call Status', render:v=><Badge label={v.replace('_',' ')} color={v} /> },
+            { key:'lead_status', label:'Lead Status', render:v=><Badge label={v.replace('_',' ')} color={v} /> },
+            { key:'time', label:'Time', muted:true },
+          ]}
+          rows={SEED.calls}
+        />
+      </Card>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// PAGE: SETTINGS
+// ═══════════════════════════════════════════════════════════
+function SettingsPage() {
+  const { t } = useTheme();
+  const { add: toast } = useToast();
+  const [incentive, setIncentive] = useState('1000');
+  const [tds, setTds] = useState('10');
+  const [pincode, setPincode] = useState('');
+  const [pincodes, setPincodes] = useState(['600001','400001','110001','500001','560001','682001']);
+
+  return (
+    <div>
+      <SectionHeader title="Settings" subtitle="Configure system parameters and API integrations" />
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:20 }}>
+        <Card>
+          <div style={{ fontFamily:"'Fraunces', serif", fontSize:16, fontWeight:600, color:t.text, marginBottom:16 }}>Incentive Configuration</div>
+          <Input label="Per Dispatched Lead (₹)" value={incentive} onChange={setIncentive} mono style={{ marginBottom:12 }} />
+          <Input label="TDS Percentage (%)" value={tds} onChange={setTds} mono style={{ marginBottom:12 }} />
+          <Select label="Payout Day" value="1" onChange={() => {}} options={[{value:'1',label:'1st of Month'},{value:'15',label:'15th of Month'},{value:'last',label:'Last Day'}]} style={{ marginBottom:16 }} />
+          <Button onClick={() => toast('success','Settings Saved','Incentive config updated')}>Save Changes</Button>
+        </Card>
+
+        <Card>
+          <div style={{ fontFamily:"'Fraunces', serif", fontSize:16, fontWeight:600, color:t.text, marginBottom:16 }}>Serviceable Pincodes</div>
+          <div style={{ display:'flex', gap:8, marginBottom:12 }}>
+            <Input value={pincode} onChange={setPincode} placeholder="e.g. 600001" mono style={{ flex:1 }} />
+            <Button onClick={() => { if (pincode.length===6) { setPincodes(p => [...p,pincode]); setPincode(''); toast('success','Added',pincode+' added'); } }}>Add</Button>
+          </div>
+          <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
+            {pincodes.map(p => (
+              <div key={p} style={{ display:'flex', alignItems:'center', gap:5, background:t.accentGlow, border:`1px solid ${t.accent}30`, borderRadius:6, padding:'4px 9px', fontSize:11, fontFamily:"'JetBrains Mono',monospace", color:t.accent }}>
+                {p}
+                <button onClick={() => setPincodes(ps => ps.filter(x=>x!==p))} style={{ background:'none', border:'none', color:t.accent, cursor:'pointer', fontSize:12, lineHeight:1 }}>×</button>
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        <Card>
+          <div style={{ fontFamily:"'Fraunces', serif", fontSize:16, fontWeight:600, color:t.text, marginBottom:16 }}>Notification Settings</div>
+          {[['QD Submitted alerts','on'],['Lead assigned alerts','on'],['Verification failure alerts','on'],['Daily summary email','off']].map(([label, def]) => (
+            <div key={label} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'9px 0', borderBottom:`1px solid ${t.border}` }}>
+              <span style={{ fontSize:13, color:t.text }}>{label}</span>
+              <Toggle defaultOn={def==='on'} />
+            </div>
+          ))}
+        </Card>
+
+        <Card>
+          <div style={{ fontFamily:"'Fraunces', serif", fontSize:16, fontWeight:600, color:t.text, marginBottom:16 }}>API Configuration</div>
+          <Input label="PAN Verification API Key" value="sk-pan-xxxxxxxx" onChange={() => {}} type="password" style={{ marginBottom:12 }} />
+          <Input label="Google Vision API Key"    value="AIzaxxxxxxx"    onChange={() => {}} type="password" style={{ marginBottom:14 }} />
+          <Button variant="ghost" onClick={() => toast('info','Connection Test','API connectivity test passed ✓')}>Test Connection</Button>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+function Toggle({ defaultOn }) {
+  const { t } = useTheme();
+  const [on, setOn] = useState(defaultOn);
+  return (
+    <div onClick={() => setOn(!on)} style={{ width:40, height:22, borderRadius:99, background: on ? t.accent : t.border2, cursor:'pointer', position:'relative', transition:'background .2s' }}>
+      <div style={{ position:'absolute', top:3, left: on ? 20:3, width:16, height:16, borderRadius:'50%', background:'#fff', transition:'left .2s', boxShadow:'0 1px 4px rgba(0,0,0,.3)' }} />
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// SALES PERSON PAGES
+// ═══════════════════════════════════════════════════════════
+function SPDashboard({ onNav }) {
+  const { t } = useTheme();
+
+  return (
+    <div>
+      <SectionHeader title="Good morning, Arjun! 👋" subtitle="You have 3 pending QD forms and 18 active leads today — June 16, 2025" />
+
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:16, marginBottom:24 }}>
+        <Stat label="My Leads"   value="18"  color="accent" icon="◎" />
+        <Stat label="Eligible"   value="12"  color="green"  icon="✓" />
+        <Stat label="Dispatched" value="8"   color="blue"   icon="↑" />
+        <Stat label="Earnings"   value="₹8K" color="amber"  icon="◈" />
+      </div>
+
+      <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr', gap:20 }}>
+        <Card>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:14 }}>
+            <div style={{ fontFamily:"'Fraunces', serif", fontSize:16, fontWeight:600, color:t.text }}>My Leads Today</div>
+            <button onClick={() => onNav('sp-leads')} style={{ fontSize:11, color:t.accent, background:'none', border:'none', cursor:'pointer', fontWeight:600 }}>View All →</button>
+          </div>
+          <Table
+            columns={[
+              { key:'customer_name', label:'Customer', render:(v,r) => <div style={{display:'flex',alignItems:'center',gap:8}}><Avatar name={v} size={26}/><span style={{fontWeight:600}}>{v}</span></div> },
+              { key:'status', label:'Status', render:v=><Badge label={v.replace(/_/g,' ')} color={v} /> },
+              { key:'id', label:'', render:(v,r) => (
+                r.status === 'eligible' ? <Button size="sm" onClick={() => onNav('sp-qd')}>Fill QD →</Button>
+                : r.status === 'new' || r.status === 'assigned' ? <Button variant="ghost" size="sm" onClick={() => onNav('sp-call')}>📞 Call</Button>
+                : <Button variant="ghost" size="sm">View</Button>
+              )},
+            ]}
+            rows={SEED.leads.filter(l => l.assigned_to === 'u1').slice(0,4)}
+          />
+        </Card>
+
+        <Card>
+          <div style={{ fontFamily:"'Fraunces', serif", fontSize:16, fontWeight:600, color:t.text, marginBottom:16 }}>Daily Progress</div>
+          {[
+            { label:'Calls Made', val:14, max:20, color:'accent' },
+            { label:'Verified',   val:10, max:14, color:'green'  },
+            { label:'QD Submitted',val:5, max:10, color:'amber'  },
+            { label:'Dispatched', val:3,  max:5,  color:'teal'   },
+          ].map(p => (
+            <div key={p.label} style={{ marginBottom:14 }}>
+              <div style={{ display:'flex', justifyContent:'space-between', fontSize:12, marginBottom:5 }}>
+                <span style={{ color:t.text }}>{p.label}</span>
+                <span style={{ color:t.text2, fontFamily:"'JetBrains Mono',monospace", fontSize:11 }}>{p.val}/{p.max}</span>
+              </div>
+              <ProgressBar value={(p.val/p.max)*100} color={p.color} />
+            </div>
+          ))}
+          <div style={{ marginTop:16, padding:'14px', background:t.bg3, borderRadius:10, textAlign:'center' }}>
+            <div style={{ fontFamily:"'Fraunces', serif", fontSize:28, fontWeight:700, color:t.green }}>₹8,000</div>
+            <div style={{ fontSize:11, color:t.text3, marginTop:4 }}>Earned this month</div>
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+function SPVerifyPage() {
+  const { t } = useTheme();
+  const [pan, setPan] = useState('');
+  const [pincode, setPincode] = useState('');
+  const [result, setResult] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const VALID_PINS = ['600001','600002','400001','110001','500001','560001','682001','700001'];
+  const DUP_PANS   = ['ABCDE1234F','XYZAB5678G'];
+
+  const runVerify = () => {
+    if (!pan || !pincode) return;
+    setLoading(true); setResult(null);
+    setTimeout(() => {
+      const panOk = /^[A-Z]{5}[0-9]{4}[A-Z]$/.test(pan.toUpperCase()) && !DUP_PANS.includes(pan.toUpperCase());
+      const pinOk = VALID_PINS.includes(pincode);
+      setResult({ panOk, pinOk, eligible: panOk && pinOk });
+      setLoading(false);
+    }, 1200);
+  };
+
+  return (
+    <div>
+      <SectionHeader title="PAN & Pincode Verification" subtitle="Verify customer eligibility before QD submission" />
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:20 }}>
+        <Card>
+          <div style={{ fontFamily:"'Fraunces', serif", fontSize:16, fontWeight:600, color:t.text, marginBottom:16 }}>Verify Customer</div>
+          <Select label="Lead" value="l1" onChange={() => {}} options={SEED.leads.filter(l=>l.assigned_to==='u1').map(l=>({value:l.id,label:`${l.customer_name} — ${l.lead_number}`}))} style={{ marginBottom:12 }} />
+          <Input label="PAN Number" value={pan} onChange={v => setPan(v.toUpperCase())} placeholder="ABCDE1234F" mono style={{ marginBottom:12 }} hint="Format: ABCDE1234F" />
+          <Input label="Pincode"    value={pincode} onChange={setPincode} placeholder="600001" mono style={{ marginBottom:16 }} />
+          <Button onClick={runVerify} disabled={loading || !pan || !pincode} style={{ width:'100%', justifyContent:'center' }}>
+            {loading ? 'Verifying…' : '⊕ Verify Now'}
+          </Button>
+
+          {result && (
+            <div style={{ marginTop:14 }}>
+              {[
+                { ok: result.panOk, okMsg:`PAN ${pan} is valid and unique`, failMsg:`PAN ${pan} already exists in system` },
+                { ok: result.pinOk, okMsg:`Pincode ${pincode} is serviceable`, failMsg:`Pincode ${pincode} is not in serviceable list` },
+              ].map((r, i) => (
+                <div key={i} style={{ padding:'10px 14px', borderRadius:8, background: r.ok ? t.greenBg : t.redBg, border:`1px solid ${r.ok?t.green:t.red}30`, marginBottom:8, display:'flex', alignItems:'center', gap:10 }}>
+                  <span style={{ color: r.ok ? t.green : t.red, fontSize:16 }}>{r.ok ? '✓' : '✕'}</span>
+                  <span style={{ fontSize:13, color: r.ok ? t.green : t.red, fontWeight:500 }}>{r.ok ? r.okMsg : r.failMsg}</span>
+                </div>
+              ))}
+              <div style={{ padding:'12px 14px', borderRadius:8, background: result.eligible ? t.greenBg : t.redBg, border:`1px solid ${result.eligible?t.green:t.red}30`, marginTop:4, textAlign:'center' }}>
+                <div style={{ fontSize:14, fontWeight:700, color: result.eligible ? t.green : t.red }}>
+                  {result.eligible ? '🎉 Customer Eligible — Proceed to QD Form' : '🚫 Customer Not Eligible — Lead Closed'}
+                </div>
+              </div>
+            </div>
+          )}
+        </Card>
+
+        <Card>
+          <div style={{ fontFamily:"'Fraunces', serif", fontSize:16, fontWeight:600, color:t.text, marginBottom:14 }}>Verification Rules</div>
+          {[
+            { icon:'1', title:'PAN Validation', desc:'Format: ABCDE1234F. Checks if PAN already exists in the system database.' },
+            { icon:'2', title:'Pincode Check',   desc:'Pincode must be in the serviceable whitelist configured by admin.' },
+            { icon:'3', title:'Final Result',    desc:'Both must pass. If either fails, lead is automatically closed as Not Eligible.' },
+          ].map((r, i, arr) => (
+            <div key={i} style={{ display:'flex', gap:12, paddingBottom: i<arr.length-1 ? 14:0 }}>
+              <div style={{ display:'flex', flexDirection:'column', alignItems:'center' }}>
+                <div style={{ width:26, height:26, borderRadius:'50%', background:t.accentGlow, border:`1px solid ${t.accent}40`, color:t.accent, display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:700, flexShrink:0 }}>{r.icon}</div>
+                {i<arr.length-1 && <div style={{ width:1, flex:1, background:t.border, marginTop:4 }} />}
+              </div>
+              <div style={{ flex:1, paddingBottom: i<arr.length-1 ? 8:0 }}>
+                <div style={{ fontSize:13, fontWeight:600, color:t.text }}>{r.title}</div>
+                <div style={{ fontSize:12, color:t.text3, marginTop:3, lineHeight:1.5 }}>{r.desc}</div>
+              </div>
+            </div>
+          ))}
+          <Divider />
+          <div style={{ fontSize:11, fontWeight:600, color:t.text3, textTransform:'uppercase', letterSpacing:'.06em', marginBottom:8 }}>Serviceable Pincodes</div>
+          <div style={{ display:'flex', flexWrap:'wrap', gap:5 }}>
+            {['600001','600002','400001','110001','500001','560001','682001'].map(p => (
+              <span key={p} style={{ padding:'3px 8px', background:t.accentGlow, border:`1px solid ${t.accent}30`, borderRadius:5, fontSize:10, fontFamily:"'JetBrains Mono',monospace", color:t.accent }}>{p}</span>
+            ))}
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+function SPQDForm() {
+  const { t } = useTheme();
+  const { add: toast } = useToast();
+  const [step, setStep] = useState(1);
+  const [empType, setEmpType] = useState('');
+  const [form, setForm] = useState({ fatherName:'', motherName:'', address:'', role:'', salary:'', company:'', bizName:'', gst:'' });
+
+  const STEPS = ['Basic Info','Employment','Documents','Review'];
+
+  return (
+    <div>
+      <SectionHeader title="QD Form — Quality Data" subtitle="Complete and submit customer quality data for dispatch approval" />
+
+      {/* Step indicator */}
+      <div style={{ display:'flex', alignItems:'center', marginBottom:28 }}>
+        {STEPS.map((s, i) => (
+          <React.Fragment key={s}>
+            <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+              <div style={{
+                width:30, height:30, borderRadius:'50%',
+                background: i+1 < step ? t.green : i+1 === step ? t.accent : t.bg3,
+                border: `2px solid ${i+1 < step ? t.green : i+1 === step ? t.accent : t.border2}`,
+                display:'flex', alignItems:'center', justifyContent:'center',
+                fontSize:12, fontWeight:700,
+                color: i+1 <= step ? '#fff' : t.text3,
+                boxShadow: i+1 === step ? `0 0 0 4px ${t.accentGlow}` : 'none',
+                transition:'all .3s', flexShrink:0,
+              }}>{i+1 < step ? '✓' : i+1}</div>
+              <span style={{ fontSize:12, fontWeight: i+1 === step ? 600 : 400, color: i+1 === step ? t.text : i+1 < step ? t.green : t.text3 }}>{s}</span>
+            </div>
+            {i < STEPS.length-1 && (
+              <div style={{ flex:1, height:2, background: i+1 < step ? t.green : t.border, margin:'0 10px', transition:'background .3s' }} />
+            )}
+          </React.Fragment>
+        ))}
+      </div>
+
+      <Card>
+        {step === 1 && (
+          <div>
+            <div style={{ fontFamily:"'Fraunces', serif", fontSize:17, fontWeight:600, color:t.text, marginBottom:18 }}>Step 1 — Basic Information</div>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>
+              <Input label="Customer Name" value="Ravi Kumar" onChange={() => {}} style={{gridColumn:'1/-1'}} />
+              <Input label="Mobile"  value="9876543210" onChange={() => {}} mono />
+              <Input label="Pincode" value="600001"     onChange={() => {}} mono />
+              <Input label="Father's Name" value={form.fatherName} onChange={v=>setForm(p=>({...p,fatherName:v}))} placeholder="Enter father's full name" />
+              <Input label="Mother's Name" value={form.motherName} onChange={v=>setForm(p=>({...p,motherName:v}))} placeholder="Enter mother's full name" />
+              <div style={{ gridColumn:'1/-1' }}>
+                <label style={{ display:'block', fontSize:11, fontWeight:600, color:t.text3, textTransform:'uppercase', letterSpacing:'.06em', marginBottom:6 }}>Residential Address</label>
+                <textarea value={form.address} onChange={e=>setForm(p=>({...p,address:e.target.value}))} placeholder="Full residential address" rows={3} style={{ width:'100%', background:t.inputBg, color:t.text, border:`1.5px solid ${t.border}`, borderRadius:8, padding:'9px 12px', fontSize:13, outline:'none', resize:'vertical', fontFamily:'inherit' }} />
+              </div>
+            </div>
+            <div style={{ display:'flex', justifyContent:'flex-end', marginTop:18 }}>
+              <Button onClick={() => setStep(2)}>Next → Employment</Button>
+            </div>
+          </div>
+        )}
+
+        {step === 2 && (
+          <div>
+            <div style={{ fontFamily:"'Fraunces', serif", fontSize:17, fontWeight:600, color:t.text, marginBottom:18 }}>Step 2 — Employment Details</div>
+            <Select label="Employment Type" value={empType} onChange={setEmpType}
+              options={[{value:'',label:'— Select Type —'},{value:'salaried',label:'Salaried'},{value:'self_employed',label:'Self Employed'}]}
+              style={{ marginBottom:16 }}
+            />
+            {empType === 'salaried' && (
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>
+                <Input label="Job Role / Designation" value={form.role}    onChange={v=>setForm(p=>({...p,role:v}))}    placeholder="e.g. Software Engineer" />
+                <Input label="Monthly Salary (₹)"     value={form.salary}  onChange={v=>setForm(p=>({...p,salary:v}))}  placeholder="e.g. 45000" mono />
+                <Input label="Company Name"            value={form.company} onChange={v=>setForm(p=>({...p,company:v}))} placeholder="Employer name" style={{gridColumn:'1/-1'}} />
+              </div>
+            )}
+            {empType === 'self_employed' && (
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>
+                <Input label="Business Name"          value={form.bizName} onChange={v=>setForm(p=>({...p,bizName:v}))} placeholder="Shop / Company name" />
+                <Input label="GST Number (Optional)"  value={form.gst}     onChange={v=>setForm(p=>({...p,gst:v}))}     placeholder="22AAAAA0000A1Z5" mono />
+                <Input label="Business Source"        value=""             onChange={() => {}} placeholder="Retail / Services / Trading" style={{gridColumn:'1/-1'}} />
+              </div>
+            )}
+            {empType === 'self_employed' && (
+              <div style={{ marginTop:14 }}>
+                <div style={{ fontSize:11, fontWeight:600, color:t.text3, textTransform:'uppercase', letterSpacing:'.06em', marginBottom:8 }}>Shop Board Photo</div>
+                <div style={{ border:`2px dashed ${t.border2}`, borderRadius:10, padding:'24px', textAlign:'center', cursor:'pointer', background:t.bg3 }}>
+                  <div style={{ fontSize:22, marginBottom:6, opacity:.4 }}>📸</div>
+                  <div style={{ fontSize:12, color:t.text3 }}>Upload shop board photo</div>
+                </div>
+              </div>
+            )}
+            <div style={{ display:'flex', justifyContent:'space-between', marginTop:20 }}>
+              <Button variant="ghost" onClick={() => setStep(1)}>← Back</Button>
+              <Button onClick={() => setStep(3)} disabled={!empType}>Next → Documents</Button>
+            </div>
+          </div>
+        )}
+
+        {step === 3 && (
+          <div>
+            <div style={{ fontFamily:"'Fraunces', serif", fontSize:17, fontWeight:600, color:t.text, marginBottom:18 }}>Step 3 — Document Upload</div>
+            {[
+              { label: empType==='salaried' ? '3-Month Payslips' : 'Business Registration',    icon:'📄', sub:'PDF, JPG, PNG' },
+              { label: empType==='salaried' ? 'Bank Statement (3 months)' : 'GST Certificate', icon:'🏦', sub:'PDF only' },
+            ].map(doc => (
+              <div key={doc.label} style={{ marginBottom:14 }}>
+                <div style={{ fontSize:11, fontWeight:600, color:t.text3, textTransform:'uppercase', letterSpacing:'.06em', marginBottom:8 }}>{doc.label}</div>
+                <div style={{ border:`2px dashed ${t.border2}`, borderRadius:10, padding:'20px', textAlign:'center', cursor:'pointer', background:t.bg3, display:'flex', alignItems:'center', justifyContent:'center', gap:12 }}>
+                  <span style={{ fontSize:20 }}>{doc.icon}</span>
+                  <div><div style={{ fontSize:12, fontWeight:600, color:t.text2 }}>Click to upload</div><div style={{ fontSize:11, color:t.text3 }}>{doc.sub}</div></div>
+                </div>
+              </div>
+            ))}
+            <div style={{ display:'flex', justifyContent:'space-between', marginTop:20 }}>
+              <Button variant="ghost" onClick={() => setStep(2)}>← Back</Button>
+              <Button onClick={() => setStep(4)}>Next → Review</Button>
+            </div>
+          </div>
+        )}
+
+        {step === 4 && (
+          <div>
+            <div style={{ fontFamily:"'Fraunces', serif", fontSize:17, fontWeight:600, color:t.text, marginBottom:18 }}>Step 4 — Review & Submit</div>
+            <InfoRow label="Customer"    value="Ravi Kumar" />
+            <InfoRow label="Mobile"      value="9876543210" mono />
+            <InfoRow label="Employment"  value={<Badge label={empType||'salaried'} color={empType||'salaried'} />} />
+            <InfoRow label="Father"      value={form.fatherName || 'Ram Kumar'} />
+            <InfoRow label="Mother"      value={form.motherName || 'Sita Kumar'} />
+            <InfoRow label="Documents"   value="✅ 2 files uploaded" />
+            <div style={{ padding:'12px 14px', borderRadius:8, background:t.greenBg, border:`1px solid ${t.green}30`, marginTop:14, display:'flex', alignItems:'center', gap:10 }}>
+              <span style={{ color:t.green, fontSize:16 }}>✓</span>
+              <span style={{ fontSize:13, color:t.green, fontWeight:500 }}>All fields verified. Ready to submit to admin for review.</span>
+            </div>
+            <div style={{ display:'flex', justifyContent:'space-between', marginTop:20 }}>
+              <Button variant="ghost" onClick={() => setStep(3)}>← Back</Button>
+              <Button onClick={() => { toast('success','QD Submitted!','Your QD form has been submitted for admin review'); setStep(1); setEmpType(''); }}>Submit QD Form ✓</Button>
+            </div>
+          </div>
+        )}
+      </Card>
+    </div>
+  );
+}
+
+function SPCallPage() {
+  const { t } = useTheme();
+  const { add: toast } = useToast();
+  const [lead, setLead] = useState('');
+  const [calling, setCalling] = useState(false);
+  const [secs, setSecs] = useState(0);
+  const timerRef = useRef(null);
+
+  const leads = SEED.leads.filter(l => l.assigned_to === 'u1');
+  const sel = leads.find(l => l.id === lead);
+
+  const startCall = () => {
+    setCalling(true); setSecs(0);
+    timerRef.current = setInterval(() => setSecs(s => s+1), 1000);
+    toast('info','Calling…','Connecting to customer');
+  };
+  const endCall = () => {
+    clearInterval(timerRef.current); setCalling(false);
+    toast('success','Call Ended',`Duration: ${Math.floor(secs/60)}:${String(secs%60).padStart(2,'0')}`);
+  };
+
+  const fmt = s => `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
+
+  return (
+    <div>
+      <SectionHeader title="Call Customer" subtitle="Log calls and update lead status after connecting" />
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:20 }}>
+        <div>
+          <Card style={{ marginBottom:16 }}>
+            <div style={{ fontFamily:"'Fraunces', serif", fontSize:16, fontWeight:600, color:t.text, marginBottom:14 }}>Select Lead</div>
+            <Select label="Lead" value={lead} onChange={setLead}
+              options={[{value:'',label:'— Select Lead —'},...leads.map(l=>({value:l.id,label:`${l.customer_name} — ${l.mobile}`}))]}
+              style={{ marginBottom:16 }}
+            />
+            {sel && (
+              <div>
+                <div style={{ background:t.bg3, borderRadius:12, padding:24, textAlign:'center', marginBottom:14 }}>
+                  <Avatar name={sel.customer_name} size={52} cs={undefined} />
+                  <div style={{ fontFamily:"'Fraunces', serif", fontSize:20, fontWeight:600, color:t.text, marginTop:10 }}>{sel.customer_name}</div>
+                  <div style={{ fontFamily:"'JetBrains Mono', monospace", fontSize:13, color:t.text3, marginTop:4 }}>{sel.mobile}</div>
+                  {calling && (
+                    <div style={{ fontFamily:"'JetBrains Mono', monospace", fontSize:28, color:t.green, marginTop:12, fontWeight:700 }}>{fmt(secs)}</div>
+                  )}
+                  <div style={{ display:'flex', gap:10, justifyContent:'center', marginTop:16 }}>
+                    {!calling
+                      ? <Button onClick={startCall} icon="📞">Call Now</Button>
+                      : <Button variant="danger" onClick={endCall} icon="📵">End Call</Button>
+                    }
+                  </div>
+                </div>
+                <Select label="Call Status"  value="connected" onChange={() => {}} options={[{value:'connected',label:'Connected'},{value:'not_connected',label:'Not Connected'},{value:'busy',label:'Busy'},{value:'no_answer',label:'No Answer'}]} style={{ marginBottom:12 }} />
+                <div style={{ marginBottom:14 }}>
+                  <label style={{ display:'block', fontSize:11, fontWeight:600, color:t.text3, textTransform:'uppercase', letterSpacing:'.06em', marginBottom:6 }}>Notes</label>
+                  <textarea rows={3} placeholder="Call notes…" style={{ width:'100%', background:t.inputBg, color:t.text, border:`1.5px solid ${t.border}`, borderRadius:8, padding:'9px 12px', fontSize:13, outline:'none', resize:'vertical', fontFamily:'inherit' }} />
+                </div>
+                <Button onClick={() => toast('success','Call Logged','Call record saved')}>Save Call Log</Button>
+              </div>
+            )}
+          </Card>
+        </div>
+
+        <Card>
+          <div style={{ fontFamily:"'Fraunces', serif", fontSize:16, fontWeight:600, color:t.text, marginBottom:14 }}>Today's Call Log</div>
+          {SEED.calls.slice(0,3).map((c, i, arr) => (
+            <div key={i} style={{ display:'flex', gap:12, paddingBottom: i<arr.length-1?14:0 }}>
+              <div style={{ display:'flex', flexDirection:'column', alignItems:'center' }}>
+                <div style={{ width:26, height:26, borderRadius:'50%', background: c.status==='connected' ? t.greenBg : t.redBg, color: c.status==='connected' ? t.green : t.red, display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:700 }}>☎</div>
+                {i<arr.length-1 && <div style={{ width:1, flex:1, background:t.border, marginTop:4 }} />}
+              </div>
+              <div style={{ flex:1 }}>
+                <div style={{ fontSize:12, fontWeight:600, color:t.text }}>{c.customer_name}</div>
+                <div style={{ fontSize:11, color:t.text3, marginTop:2 }}>{c.time} · {c.duration} · <span style={{ color: c.status==='connected'?t.green:t.red }}>{c.status.replace('_',' ')}</span></div>
+              </div>
+            </div>
+          ))}
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+function SPLeadsPage({ onNav }) {
+  const { t } = useTheme();
+  const myLeads = SEED.leads.filter(l => l.assigned_to === 'u1');
+
+  return (
+    <div>
+      <SectionHeader title="My Assigned Leads" subtitle="All leads assigned to you" />
+      <Card>
+        <Table
+          columns={[
+            { key:'lead_number', label:'#', muted:true, render:v=><span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:11}}>{v}</span> },
+            { key:'customer_name', label:'Customer', render:(v,r) => <div style={{display:'flex',alignItems:'center',gap:8}}><Avatar name={v} size={26}/><span style={{fontWeight:600}}>{v}</span></div> },
+            { key:'mobile',  label:'Mobile',  muted:true, render:v=><span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:12}}>{v}</span> },
+            { key:'pincode', label:'Pincode', muted:true, render:v=><span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:12}}>{v}</span> },
+            { key:'status', label:'Status', render:v=><Badge label={v.replace(/_/g,' ')} color={v} /> },
+            { key:'id', label:'Action', render:(v,r) => (
+              r.status === 'eligible' ? <Button size="sm" onClick={() => onNav('sp-qd')}>Fill QD →</Button>
+              : r.status === 'new' || r.status === 'assigned' ? <Button variant="ghost" size="sm" onClick={() => onNav('sp-call')}>📞 Call</Button>
+              : <Button variant="ghost" size="sm">View</Button>
+            )},
+          ]}
+          rows={myLeads}
+        />
+      </Card>
+    </div>
+  );
+}
+
+function SPIncentivesPage() {
+  const { t } = useTheme();
+  return (
+    <div>
+      <SectionHeader title="My Incentives" subtitle="Incentives earned for dispatched leads" />
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:16, marginBottom:24 }}>
+        <Stat label="This Month" value="₹8K"  color="green"  />
+        <Stat label="Pending"    value="₹3K"  color="amber"  />
+        <Stat label="Total Earned" value="₹42K" color="accent" />
+        <Stat label="Dispatched"  value="8"   color="blue"   />
+      </div>
+      <Card>
+        <div style={{ fontFamily:"'Fraunces', serif", fontSize:16, fontWeight:600, color:t.text, marginBottom:14 }}>Incentive History</div>
+        <Table
+          columns={[
+            { key:'month', label:'Month' },
+            { key:'dispatched', label:'Dispatched', render:v=><span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:12}}>{v}</span> },
+            { key:'gross', label:'Gross', render:v=><span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:12}}>₹{v.toLocaleString()}</span> },
+            { key:'net', label:'Net (after TDS)', render:v=><span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:13,color:t.green,fontWeight:700}}>₹{v.toLocaleString()}</span> },
+            { key:'status', label:'Status', render:v=><Badge label={v} color={v} /> },
+          ]}
+          rows={[
+            { month:'June 2025',  dispatched:8,  gross:8000,  net:7200,  status:'pending' },
+            { month:'May 2025',   dispatched:12, gross:12000, net:10800, status:'paid' },
+            { month:'April 2025', dispatched:10, gross:10000, net:9000,  status:'paid' },
+          ]}
+        />
+      </Card>
+    </div>
+  );
+}
+
+function SPProfilePage() {
+  const { t } = useTheme();
+  const { add: toast } = useToast();
+  return (
+    <div>
+      <SectionHeader title="My Profile" subtitle="Manage your account and credentials" />
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:20 }}>
+        <Card>
+          <div style={{ textAlign:'center', marginBottom:20 }}>
+            <div style={{ display:'inline-flex', position:'relative' }}>
+              <Avatar name="Arjun Kumar" size={72} />
+              <button style={{ position:'absolute', bottom:0, right:0, width:22, height:22, borderRadius:'50%', background:t.accent, border:`2px solid ${t.card}`, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', color:'#fff', fontSize:10 }}>✎</button>
+            </div>
+            <div style={{ fontFamily:"'Fraunces', serif", fontSize:20, fontWeight:600, color:t.text, marginTop:12 }}>Arjun Kumar</div>
+            <div style={{ fontSize:12, color:t.text3 }}>EMP001 · Sales Person</div>
+            <div style={{ marginTop:8 }}><Badge label="active" color="active" /></div>
+          </div>
+          <Input label="Full Name" value="Arjun Kumar" onChange={() => {}} style={{ marginBottom:12 }} />
+          <Input label="Mobile" value="9876543210" onChange={() => {}} mono style={{ marginBottom:12 }} />
+          <Input label="Email" value="arjun@salesforce.com" onChange={() => {}} style={{ marginBottom:14 }} />
+          <Button onClick={() => toast('success','Profile Updated','Your profile has been saved')}>Update Profile</Button>
+        </Card>
+        <div>
+          <Card style={{ marginBottom:16 }}>
+            <div style={{ fontFamily:"'Fraunces', serif", fontSize:16, fontWeight:600, color:t.text, marginBottom:16 }}>Change Password</div>
+            <Input label="Current Password" value="" onChange={() => {}} type="password" style={{ marginBottom:12 }} />
+            <Input label="New Password"     value="" onChange={() => {}} type="password" style={{ marginBottom:12 }} hint="Minimum 8 characters" />
+            <Input label="Confirm Password" value="" onChange={() => {}} type="password" style={{ marginBottom:14 }} />
+            <Button onClick={() => toast('success','Password Changed','Your password has been updated')}>Change Password</Button>
+          </Card>
+          <Card>
+            <div style={{ fontFamily:"'Fraunces', serif", fontSize:16, fontWeight:600, color:t.text, marginBottom:14 }}>Performance Summary</div>
+            {[
+              { label:'Calls This Month', val:156, max:200, color:'accent' },
+              { label:'Lead Conversion',  val:82,  max:100, color:'green', pct:'82%' },
+              { label:'QD Approval Rate', val:90,  max:100, color:'amber', pct:'90%' },
+            ].map(p => (
+              <div key={p.label} style={{ marginBottom:14 }}>
+                <div style={{ display:'flex', justifyContent:'space-between', fontSize:12, marginBottom:5 }}>
+                  <span style={{ color:t.text }}>{p.label}</span>
+                  <span style={{ color:t.text2, fontFamily:"'JetBrains Mono',monospace", fontSize:11 }}>{p.pct || p.val}</span>
+                </div>
+                <ProgressBar value={(p.val/p.max)*100} color={p.color} />
+              </div>
+            ))}
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SPDocsPage() {
+  const { t } = useTheme();
+  const { add: toast } = useToast();
+  return (
+    <div>
+      <SectionHeader title="Upload Documents" subtitle="Manage your verification and QD documents" />
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:20 }}>
+        <Card>
+          <div style={{ fontFamily:"'Fraunces', serif", fontSize:16, fontWeight:600, color:t.text, marginBottom:14 }}>Upload Document</div>
+          <Select label="Document Type" value="payslip" onChange={() => {}}
+            options={[{value:'payslip',label:'Payslip'},{value:'bank_statement',label:'Bank Statement'},{value:'id_proof',label:'ID Proof'},{value:'shop_board',label:'Shop Board Photo'},{value:'gst_cert',label:'GST Certificate'}]}
+            style={{ marginBottom:12 }}
+          />
+          <div style={{ border:`2px dashed ${t.border2}`, borderRadius:10, padding:'32px 20px', textAlign:'center', cursor:'pointer', background:t.bg3, marginBottom:14 }}>
+            <div style={{ fontSize:26, marginBottom:8, opacity:.4 }}>📁</div>
+            <div style={{ fontSize:13, fontWeight:600, color:t.text2 }}>Click to upload document</div>
+            <div style={{ fontSize:11, color:t.text3, marginTop:4 }}>PDF, JPG, PNG · Max 10MB</div>
+          </div>
+          <Button onClick={() => toast('success','Uploaded','Document uploaded successfully')}>Upload Document</Button>
+        </Card>
+        <Card>
+          <div style={{ fontFamily:"'Fraunces', serif", fontSize:16, fontWeight:600, color:t.text, marginBottom:14 }}>Uploaded Documents</div>
+          <Table
+            columns={[
+              { key:'file', label:'Document' },
+              { key:'type', label:'Type', render:v=><Badge label={v.replace('_',' ')} color="assigned" /> },
+              { key:'date', label:'Date', muted:true },
+              { key:'id', label:'', render:() => <Button variant="ghost" size="sm">View</Button> },
+            ]}
+            rows={[
+              { id:1, file:'payslip_june.pdf',   type:'payslip',        date:'Today' },
+              { id:2, file:'bank_stmt_may.pdf',  type:'bank_statement', date:'Yesterday' },
+            ]}
+          />
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// LOGIN PAGE
+// ═══════════════════════════════════════════════════════════
+function LoginPage({ onLogin }) {
+  const { t, theme, setTheme } = useTheme();
+  const [loginRole, setLoginRole] = useState('admin');
+  const [email, setEmail]         = useState('admin@salesforce.com');
+  const [pass, setPass]           = useState('Admin@123');
+  const [loading, setLoading]     = useState(false);
+
+  const doLogin = () => {
+    setLoading(true);
+    setTimeout(() => { setLoading(false); onLogin(loginRole); }, 900);
+  };
+
+  return (
+    <div style={{ minHeight:'100vh', background:t.bg, display:'flex', alignItems:'center', justifyContent:'center', position:'relative', overflow:'hidden' }}>
+      {/* Background gradient orbs */}
+      <div style={{ position:'absolute', width:600, height:600, borderRadius:'50%', background:`radial-gradient(circle, ${t.accent}18 0%, transparent 70%)`, top:'10%', left:'5%', pointerEvents:'none' }} />
+      <div style={{ position:'absolute', width:400, height:400, borderRadius:'50%', background:`radial-gradient(circle, ${t.green}10 0%, transparent 70%)`, bottom:'10%', right:'10%', pointerEvents:'none' }} />
+
+      {/* Theme toggle */}
+      <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} style={{
+        position:'absolute', top:20, right:20, width:36, height:36, borderRadius:8,
+        background:t.bg2, border:`1px solid ${t.border}`, cursor:'pointer',
+        color:t.text2, fontSize:16, display:'flex', alignItems:'center', justifyContent:'center',
+      }}>{theme === 'dark' ? '☀' : '☾'}</button>
+
+      <div style={{
+        background: t.bg2, border:`1px solid ${t.border2}`, borderRadius:20,
+        padding:'40px 36px', width:'100%', maxWidth:420,
+        boxShadow:`0 32px 80px ${t.name==='dark'?'rgba(0,0,0,.6)':'rgba(0,0,0,.12)'}`,
+        position:'relative', zIndex:1, animation:'slideUp .4s cubic-bezier(.16,1,.3,1)',
+      }}>
+        {/* Logo */}
+        <div style={{ textAlign:'center', marginBottom:28 }}>
+          <div style={{ width:52, height:52, borderRadius:14, background:`linear-gradient(135deg, ${t.accent}, ${t.accentL})`, display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 14px' }}>
+            <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+              <path d="M13 3L23 8.5V17.5L13 23L3 17.5V8.5L13 3Z" stroke="white" strokeWidth="2" fill="none"/>
+              <circle cx="13" cy="13" r="3" fill="white"/>
+            </svg>
+          </div>
+          <h1 style={{ fontFamily:"'Fraunces', serif", fontSize:24, fontWeight:700, color:t.text, letterSpacing:'-.01em' }}>SalesForce Pro</h1>
+          <p style={{ fontSize:13, color:t.text3, marginTop:5 }}>WFH Sales Team Management Portal</p>
+        </div>
+
+        {/* Role selector */}
+        <div style={{ display:'flex', gap:2, background:t.bg3, padding:3, borderRadius:10, marginBottom:22 }}>
+          {['admin','sales'].map(role => (
+            <button key={role} onClick={() => {
+              setLoginRole(role);
+              setEmail(role === 'admin' ? 'admin@salesforce.com' : 'arjun@salesforce.com');
+              setPass(role === 'admin' ? 'Admin@123' : 'Sales@123');
+            }} style={{
+              flex:1, padding:'8px 0', borderRadius:8, fontSize:13, fontWeight:600, cursor:'pointer', border:'none',
+              background: loginRole === role ? (t.name === 'dark' ? t.card : '#fff') : 'transparent',
+              color: loginRole === role ? t.text : t.text3,
+              boxShadow: loginRole === role ? t.shadowSm : 'none',
+              transition:'all .18s',
+            }}>
+              {role === 'admin' ? 'Admin' : 'Sales Person'}
+            </button>
+          ))}
+        </div>
+
+        <Input label="Email Address" value={email} onChange={setEmail} placeholder="you@company.com" type="email" style={{ marginBottom:12 }} />
+        <Input label="Password"      value={pass}  onChange={setPass}  placeholder="••••••••"        type="password" style={{ marginBottom:6 }} />
+
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20, marginTop:8 }}>
+          <label style={{ display:'flex', alignItems:'center', gap:7, fontSize:12, color:t.text2, cursor:'pointer' }}>
+            <input type="checkbox" defaultChecked style={{ accentColor:t.accent }} /> Remember me
+          </label>
+          <span style={{ fontSize:12, color:t.accent, cursor:'pointer', fontWeight:600 }}>Forgot password?</span>
+        </div>
+
+        <button onClick={doLogin} disabled={loading} style={{
+          width:'100%', padding:'11px 0', borderRadius:10,
+          background: `linear-gradient(135deg, ${t.accent}, ${t.accentL})`,
+          color:'#fff', fontFamily:'inherit', fontSize:14, fontWeight:700,
+          border:'none', cursor:'pointer', transition:'opacity .2s',
+          opacity: loading ? .7 : 1, boxShadow:`0 4px 20px ${t.accentGlow}`,
+        }}>{loading ? 'Signing in…' : 'Sign In →'}</button>
+
+        <p style={{ textAlign:'center', fontSize:11, color:t.text3, marginTop:16 }}>
+          Demo mode — any credentials work
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// PAGE TITLES
+// ═══════════════════════════════════════════════════════════
+const PAGE_TITLES = {
+  'dashboard':'Dashboard','salespersons':'Sales Persons','leads':'Lead Management',
+  'upload':'Upload Datasheet','assign':'Assign Leads','pipeline':'Pipeline View',
+  'qd':'QD Management','reports':'Reports','incentives':'Incentives','calls':'Call Tracking','settings':'Settings',
+  'sp-dashboard':'Dashboard','sp-leads':'My Leads','sp-call':'Call Customer',
+  'sp-verify':'Verification','sp-qd':'QD Form','sp-docs':'Documents',
+  'sp-incentives':'My Incentives','sp-profile':'My Profile',
+};
+
+// ═══════════════════════════════════════════════════════════
+// ROOT APP
+// ═══════════════════════════════════════════════════════════
+function App() {
+  const [auth, setAuth]   = useState(null); // { role, user }
+  const [page, setPage]   = useState('dashboard');
+  const { t } = useTheme();
+  const { add: toast } = useToast();
+
+  const USERS = {
+    admin:  { name:'System Admin', role:'Administrator' },
+    sales:  { name:'Arjun Kumar',  role:'Sales Person'  },
+  };
+
+  const handleLogin = (role) => {
+    setAuth({ role, user: USERS[role] });
+    setPage(role === 'admin' ? 'dashboard' : 'sp-dashboard');
+    toast('success', 'Welcome back!', USERS[role].name);
+  };
+
+  const handleLogout = () => {
+    setAuth(null);
+    toast('info', 'Logged out', 'Session ended');
+  };
+
+  const goPage = (p) => setPage(p);
+
+  if (!auth) return <LoginPage onLogin={handleLogin} />;
+
+  const renderPage = () => {
+    switch (page) {
+      case 'dashboard':    return <AdminDashboard onNav={goPage} />;
+      case 'salespersons': return <SalesPersonsPage />;
+      case 'leads':        return <LeadsPage />;
+      case 'upload':       return <UploadPage />;
+      case 'assign':       return <AssignPage />;
+      case 'pipeline':     return <PipelinePage />;
+      case 'qd':           return <QDPage />;
+      case 'reports':      return <ReportsPage />;
+      case 'incentives':   return <IncentivesPage />;
+      case 'calls':        return <CallsPage />;
+      case 'settings':     return <SettingsPage />;
+      case 'sp-dashboard': return <SPDashboard onNav={goPage} />;
+      case 'sp-leads':     return <SPLeadsPage onNav={goPage} />;
+      case 'sp-call':      return <SPCallPage />;
+      case 'sp-verify':    return <SPVerifyPage />;
+      case 'sp-qd':        return <SPQDForm />;
+      case 'sp-docs':      return <SPDocsPage />;
+      case 'sp-incentives':return <SPIncentivesPage />;
+      case 'sp-profile':   return <SPProfilePage />;
+      default: return <AdminDashboard onNav={goPage} />;
+    }
+  };
+
+  return (
+    <div style={{ display:'flex', minHeight:'100vh', background:t.bg }}>
+      <Sidebar page={page} onPage={setPage} role={auth.role} user={auth.user} onLogout={handleLogout} />
+      <div style={{ marginLeft: t.sidebarW, flex:1, display:'flex', flexDirection:'column', minHeight:'100vh', minWidth:0 }}>
+        <Topbar title={PAGE_TITLES[page] || 'Dashboard'} user={auth.user} />
+        <main style={{ flex:1, padding:28, overflowX:'hidden' }}>
+          {renderPage()}
+        </main>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// CSS ANIMATIONS
+// ═══════════════════════════════════════════════════════════
+const style = document.createElement('style');
+style.textContent = `
+  @keyframes fadeIn  { from{opacity:0} to{opacity:1} }
+  @keyframes slideUp { from{opacity:0;transform:translateY(18px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes slideLeft { from{opacity:0;transform:translateX(14px)} to{opacity:1;transform:translateX(0)} }
+  @keyframes spin    { to{transform:rotate(360deg)} }
+  @keyframes pulse   { 0%,100%{opacity:1} 50%{opacity:.3} }
+`;
+document.head.appendChild(style);
+
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <ThemeProvider>
+    <ToastProvider>
+      <App />
+    </ToastProvider>
+  </ThemeProvider>
+);
+</script>
+</body>
+</html>
