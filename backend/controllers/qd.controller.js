@@ -86,6 +86,12 @@ exports.updateQD = async (req, res) => {
         status: 'dispatched',
         $push: { status_history: { status: 'dispatched', changed_by: req.user._id } },
       });
+    } else if (status === 'rejected') {
+      // Update lead status to rejected
+      await Lead.findByIdAndUpdate(qd.lead, {
+        status: 'rejected',
+        $push: { status_history: { status: 'rejected', changed_by: req.user._id, note: rejection_reason || 'QD Rejected' } },
+      });
     }
   }
 

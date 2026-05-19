@@ -400,7 +400,7 @@ export function LeadsPage({ onNav }) {
                   key: 'pincode', 
                   label: 'Pincode', 
                   render: (v, r) => {
-                    const isCompleted = r.status === 'qd_submitted' || r.status === 'dispatched' || r.status === 'closed';
+                    const isCompleted = r.status === 'qd_submitted' || r.status === 'dispatched' || r.status === 'closed' || r.status === 'rejected';
                     return (
                       <input
                         type="text"
@@ -417,7 +417,7 @@ export function LeadsPage({ onNav }) {
                   key: 'pan', 
                   label: 'PAN Card', 
                   render: (v, r) => {
-                    const isCompleted = r.status === 'qd_submitted' || r.status === 'dispatched' || r.status === 'closed';
+                    const isCompleted = r.status === 'qd_submitted' || r.status === 'dispatched' || r.status === 'closed' || r.status === 'rejected';
                     return (
                       <input
                         type="text"
@@ -435,7 +435,7 @@ export function LeadsPage({ onNav }) {
                   key: 'status', 
                   label: 'Status', 
                   render: (v, r) => {
-                    const isCompleted = r.status === 'qd_submitted' || r.status === 'dispatched' || r.status === 'closed';
+                    const isCompleted = r.status === 'qd_submitted' || r.status === 'dispatched' || r.status === 'closed' || r.status === 'rejected';
                     return (
                       <select
                         className="w-36 px-2 py-1 text-xs border rounded bg-background dark:bg-background-dark border-border-light dark:border-border-dark font-semibold focus:ring-1 focus:ring-accent disabled:opacity-60 disabled:bg-background-dark/20 dark:disabled:bg-background/20 disabled:cursor-not-allowed"
@@ -457,7 +457,7 @@ export function LeadsPage({ onNav }) {
                   key: 'qd_status', 
                   label: 'QD', 
                   render: (v, r) => {
-                    if (r.status === 'qd_submitted' || r.status === 'dispatched' || r.status === 'closed') {
+                    if (r.status === 'qd_submitted' || r.status === 'dispatched' || r.status === 'closed' || r.status === 'rejected') {
                       return <Badge label="Generated" color="success" />;
                     }
                     return (
@@ -482,6 +482,9 @@ export function LeadsPage({ onNav }) {
                     }
                     if (r.status === 'qd_submitted') {
                       return <Badge label="Pending Review" color="warning" />;
+                    }
+                    if (r.status === 'rejected') {
+                      return <Badge label="Rejected" color="danger" />;
                     }
                     return <span className="text-text-muted text-xs">—</span>;
                   }
