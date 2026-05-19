@@ -564,11 +564,16 @@ export function LeadsPage({ onNav }) {
                 },
                 { key: 'assigned_to', label: 'Agent', render: (v) => v?.name || '—', muted: true },
                 { 
-                  key: 'call_status', 
+                  key: 'status', 
                   label: 'Status', 
-                  render: (v) => {
-                    const statusVal = v || 'pending';
-                    return <Badge label={statusVal.replace(/_/g, ' ')} color={statusVal} />;
+                  render: (v, r) => {
+                    if (r.status === 'dispatched' || r.status === 'closed') {
+                      return <Badge label="Approved" color="success" />;
+                    }
+                    if (r.status === 'rejected') {
+                      return <Badge label="Rejected" color="danger" />;
+                    }
+                    return <Badge label="Pending" color="warning" />;
                   }
                 },
                 { 
