@@ -62,9 +62,6 @@ export const SALES_NAV = [
     section: 'Leads', 
     items: [
       { id: 'sp-leads', icon: FileText, label: 'My Leads', badge: 18 },
-      { id: 'sp-call', icon: Phone, label: 'Make a Call' },
-      { id: 'sp-verify', icon: ShieldCheck, label: 'Verification' },
-      { id: 'sp-qd', icon: FileCheck, label: 'QD Form', badge: 3, badgeColor: 'warning' },
     ]
   },
   { 
