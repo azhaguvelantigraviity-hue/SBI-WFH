@@ -239,6 +239,43 @@ export function LeadsPage({ onNav }) {
     }
   };
 
+  const downloadCSV = (filename, headers, rows) => {
+    const csvContent = [headers, ...rows]
+      .map(row => row.map(val => `"${String(val ?? '').replace(/"/g, '""')}"`).join(','))
+      .join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    addToast('success', 'Downloaded', `${filename} exported successfully.`);
+  };
+
+  const handleExportLeads = () => {
+    if (!leads || leads.length === 0) {
+      addToast('warning', 'No Data', 'No leads available to export.');
+      return;
+    }
+
+    const headers = ['Lead Number', 'Customer Name', 'Mobile', 'Pincode', 'PAN Card', 'Status', 'Agent Name', 'Updated At'];
+    const rows = leads.map(l => [
+      l.lead_number,
+      l.customer_name,
+      l.mobile,
+      l.pincode,
+      l.pan || '—',
+      l.status,
+      l.assigned_to?.name || 'Unassigned',
+      new Date(l.updatedAt).toLocaleDateString('en-IN')
+    ]);
+
+    downloadCSV(`Leads_Export_${new Date().toISOString().slice(0, 10)}.csv`, headers, rows);
+  };
+
   useEffect(() => {
     fetchAgents();
   }, []);
@@ -259,7 +296,7 @@ export function LeadsPage({ onNav }) {
         subtitle={isAgent ? `${total} leads assigned to you` : `${total} total leads across all agents`}
         action={!isAgent && (
           <div className="flex gap-3">
-            <Button variant="ghost" icon={Download}>Export CSV</Button>
+            <Button variant="ghost" icon={Download} onClick={handleExportLeads}>Export CSV</Button>
             <Button icon={Plus} onClick={() => setShowUploadModal(true)}>Upload Leads</Button>
           </div>
         )}
