@@ -399,47 +399,59 @@ export function LeadsPage({ onNav }) {
                 { 
                   key: 'pincode', 
                   label: 'Pincode', 
-                  render: (v, r) => (
-                    <input
-                      type="text"
-                      className="w-20 px-2 py-1 text-xs border rounded bg-background dark:bg-background-dark border-border-light dark:border-border-dark font-mono focus:ring-1 focus:ring-accent"
-                      value={getRowValue(r, 'pincode')}
-                      onChange={(e) => handleRowChange(r._id, 'pincode', e.target.value)}
-                      maxLength={6}
-                    />
-                  ) 
+                  render: (v, r) => {
+                    const isCompleted = r.status === 'qd_submitted' || r.status === 'dispatched' || r.status === 'closed';
+                    return (
+                      <input
+                        type="text"
+                        className="w-20 px-2 py-1 text-xs border rounded bg-background dark:bg-background-dark border-border-light dark:border-border-dark font-mono focus:ring-1 focus:ring-accent disabled:opacity-60 disabled:bg-background-dark/20 dark:disabled:bg-background/20 disabled:cursor-not-allowed"
+                        value={getRowValue(r, 'pincode')}
+                        onChange={(e) => handleRowChange(r._id, 'pincode', e.target.value)}
+                        maxLength={6}
+                        disabled={isCompleted}
+                      />
+                    );
+                  } 
                 },
                 { 
                   key: 'pan', 
                   label: 'PAN Card', 
-                  render: (v, r) => (
-                    <input
-                      type="text"
-                      className="w-28 px-2 py-1 text-xs border rounded bg-background dark:bg-background-dark border-border-light dark:border-border-dark font-mono uppercase focus:ring-1 focus:ring-accent"
-                      value={getRowValue(r, 'pan')}
-                      onChange={(e) => handleRowChange(r._id, 'pan', e.target.value.toUpperCase())}
-                      maxLength={10}
-                      placeholder="ABCDE1234F"
-                    />
-                  ) 
+                  render: (v, r) => {
+                    const isCompleted = r.status === 'qd_submitted' || r.status === 'dispatched' || r.status === 'closed';
+                    return (
+                      <input
+                        type="text"
+                        className="w-28 px-2 py-1 text-xs border rounded bg-background dark:bg-background-dark border-border-light dark:border-border-dark font-mono uppercase focus:ring-1 focus:ring-accent disabled:opacity-60 disabled:bg-background-dark/20 dark:disabled:bg-background/20 disabled:cursor-not-allowed"
+                        value={getRowValue(r, 'pan')}
+                        onChange={(e) => handleRowChange(r._id, 'pan', e.target.value.toUpperCase())}
+                        maxLength={10}
+                        placeholder="ABCDE1234F"
+                        disabled={isCompleted}
+                      />
+                    );
+                  } 
                 },
                 { 
                   key: 'status', 
                   label: 'Status', 
-                  render: (v, r) => (
-                    <select
-                      className="w-36 px-2 py-1 text-xs border rounded bg-background dark:bg-background-dark border-border-light dark:border-border-dark font-semibold focus:ring-1 focus:ring-accent"
-                      value={getRowValue(r, 'status')}
-                      onChange={(e) => handleRowChange(r._id, 'status', e.target.value)}
-                    >
-                      <option value="">Select status...</option>
-                      <option value="Listed Pincode">Listed Pincode</option>
-                      <option value="Pincode Not Listed">Pincode Not Listed</option>
-                      <option value="Fresh">Fresh</option>
-                      <option value="Follow Up">Follow Up</option>
-                      <option value="Exception">Exception</option>
-                    </select>
-                  ) 
+                  render: (v, r) => {
+                    const isCompleted = r.status === 'qd_submitted' || r.status === 'dispatched' || r.status === 'closed';
+                    return (
+                      <select
+                        className="w-36 px-2 py-1 text-xs border rounded bg-background dark:bg-background-dark border-border-light dark:border-border-dark font-semibold focus:ring-1 focus:ring-accent disabled:opacity-60 disabled:bg-background-dark/20 dark:disabled:bg-background/20 disabled:cursor-not-allowed"
+                        value={getRowValue(r, 'status')}
+                        onChange={(e) => handleRowChange(r._id, 'status', e.target.value)}
+                        disabled={isCompleted}
+                      >
+                        <option value="">Select status...</option>
+                        <option value="Listed Pincode">Listed Pincode</option>
+                        <option value="Pincode Not Listed">Pincode Not Listed</option>
+                        <option value="Fresh">Fresh</option>
+                        <option value="Follow Up">Follow Up</option>
+                        <option value="Exception">Exception</option>
+                      </select>
+                    );
+                  } 
                 },
                 { 
                   key: 'qd_status', 
