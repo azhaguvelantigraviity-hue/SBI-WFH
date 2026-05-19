@@ -27,7 +27,9 @@ exports.getUsers = async (req, res) => {
 
   const countMap = {};
   leadCounts.forEach(lc => {
-    countMap[lc._id.toString()] = { total: lc.total, dispatched: lc.dispatched };
+    if (lc && lc._id) {
+      countMap[lc._id.toString()] = { total: lc.total, dispatched: lc.dispatched };
+    }
   });
 
   const result = users.map(u => ({

@@ -35,6 +35,7 @@ export function AssignLeadsPage() {
         setAgents(agentsRes.data);
       }
     } catch (err) {
+      console.error('Fetch assignment data error:', err);
       addToast('error', 'Error', 'Failed to load data for assignment.');
     } finally {
       setLoading(false);
