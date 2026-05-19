@@ -70,9 +70,15 @@ export function LeadsPage({ onNav }) {
     const pincodeVal = edits.pincode !== undefined ? edits.pincode : lead.pincode;
     const panVal = edits.pan !== undefined ? edits.pan : lead.pan;
     const statusVal = edits.status !== undefined ? edits.status : lead.verification_status;
+    const followUpNotes = edits.follow_up_notes !== undefined ? edits.follow_up_notes : '';
 
     if (!pincodeVal || !panVal || !statusVal) {
       addToast('warning', 'Validation Error', 'Pincode, PAN Card, and Status are required.');
+      return;
+    }
+
+    if ((statusVal === 'Follow Up' || statusVal === 'Exception') && !followUpNotes.trim()) {
+      addToast('warning', 'Notes Required', 'Please enter comments explaining the follow-up or exception.');
       return;
     }
 
@@ -109,7 +115,7 @@ export function LeadsPage({ onNav }) {
         pan: panVal.toUpperCase().trim(),
         verification_status: statusVal,
         status: newStatus,
-        notes: `Row updated on My Leads: ${statusVal}`
+        notes: followUpNotes.trim() || `Row updated on My Leads: ${statusVal}`
       });
 
       if (res.success) {
@@ -436,20 +442,33 @@ export function LeadsPage({ onNav }) {
                   label: 'Status', 
                   render: (v, r) => {
                     const isCompleted = r.status === 'qd_submitted' || r.status === 'dispatched' || r.status === 'closed' || r.status === 'rejected';
+                    const currentStatus = getRowValue(r, 'status');
+                    const hasNotes = currentStatus === 'Follow Up' || currentStatus === 'Exception';
                     return (
-                      <select
-                        className="w-36 px-2 py-1 text-xs border rounded bg-background dark:bg-background-dark border-border-light dark:border-border-dark font-semibold focus:ring-1 focus:ring-accent disabled:opacity-60 disabled:bg-background-dark/20 dark:disabled:bg-background/20 disabled:cursor-not-allowed"
-                        value={getRowValue(r, 'status')}
-                        onChange={(e) => handleRowChange(r._id, 'status', e.target.value)}
-                        disabled={isCompleted}
-                      >
-                        <option value="">Select status...</option>
-                        <option value="Listed Pincode">Listed Pincode</option>
-                        <option value="Pincode Not Listed">Pincode Not Listed</option>
-                        <option value="Fresh">Fresh</option>
-                        <option value="Follow Up">Follow Up</option>
-                        <option value="Exception">Exception</option>
-                      </select>
+                      <div className="flex flex-col gap-1.5 min-w-[150px]">
+                        <select
+                          className="w-36 px-2 py-1 text-xs border rounded bg-background dark:bg-background-dark border-border-light dark:border-border-dark font-semibold focus:ring-1 focus:ring-accent disabled:opacity-60 disabled:bg-background-dark/20 dark:disabled:bg-background/20 disabled:cursor-not-allowed"
+                          value={currentStatus}
+                          onChange={(e) => handleRowChange(r._id, 'status', e.target.value)}
+                          disabled={isCompleted}
+                        >
+                          <option value="">Select status...</option>
+                          <option value="Listed Pincode">Listed Pincode</option>
+                          <option value="Pincode Not Listed">Pincode Not Listed</option>
+                          <option value="Fresh">Fresh</option>
+                          <option value="Follow Up">Follow Up</option>
+                          <option value="Exception">Exception</option>
+                        </select>
+                        {!isCompleted && hasNotes && (
+                          <input
+                            type="text"
+                            placeholder="Type comments..."
+                            className="w-36 px-2 py-1.5 text-[10px] border rounded bg-background dark:bg-background-dark border-border-light dark:border-border-dark focus:ring-1 focus:ring-accent shadow-inner placeholder:text-text-muted font-medium"
+                            value={getRowValue(r, 'follow_up_notes')}
+                            onChange={(e) => handleRowChange(r._id, 'follow_up_notes', e.target.value)}
+                          />
+                        )}
+                      </div>
                     );
                   } 
                 },

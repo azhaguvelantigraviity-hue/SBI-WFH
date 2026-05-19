@@ -146,7 +146,36 @@ exports.updateLead = async (req, res) => {
   if (pan !== undefined) lead.pan = pan;
   if (father_name !== undefined) lead.father_name = father_name;
   if (mother_name !== undefined) lead.mother_name = mother_name;
-  if (verification_status !== undefined) lead.verification_status = verification_status;
+  if (verification_status !== undefined) {
+    lead.verification_status = verification_status;
+    if (verification_status === 'Follow Up') {
+      lead.call_status = 'follow_up';
+      const Call = require('../models/Call');
+      await Call.create({
+        lead: lead._id,
+        agent: req.user._id,
+        customer_name: lead.customer_name,
+        mobile: lead.mobile,
+        status: 'follow_up',
+        duration: '—',
+        notes: notes || 'Logged from Leads update',
+        lead_status_after: lead.status,
+      });
+    } else if (verification_status === 'Exception') {
+      lead.call_status = 'exception';
+      const Call = require('../models/Call');
+      await Call.create({
+        lead: lead._id,
+        agent: req.user._id,
+        customer_name: lead.customer_name,
+        mobile: lead.mobile,
+        status: 'exception',
+        duration: '—',
+        notes: notes || 'Logged from Leads update',
+        lead_status_after: lead.status,
+      });
+    }
+  }
 
   await lead.save();
   await lead.populate('assigned_to', 'name employee_id');
