@@ -39,6 +39,94 @@ export function LeadsPage({ onNav }) {
   const [filterDateFrom, setFilterDateFrom] = useState('');
   const [filterDateTo, setFilterDateTo] = useState('');
   const { addToast } = useToast();
+  const [editedLeads, setEditedLeads] = useState({});
+  const [savingRow, setSavingRow] = useState(null);
+
+  const handleRowChange = (leadId, field, value) => {
+    setEditedLeads(prev => ({
+      ...prev,
+      [leadId]: {
+        ...prev[leadId],
+        [field]: value
+      }
+    }));
+  };
+
+  const getRowValue = (lead, field) => {
+    if (editedLeads[lead._id] && editedLeads[lead._id][field] !== undefined) {
+      return editedLeads[lead._id][field];
+    }
+    if (field === 'status') return lead.verification_status || '';
+    return lead[field] || '';
+  };
+
+  const handleSaveRow = async (lead) => {
+    const edits = editedLeads[lead._id];
+    if (!edits) {
+      addToast('info', 'No Changes', 'No changes made to this row.');
+      return;
+    }
+
+    const pincodeVal = edits.pincode !== undefined ? edits.pincode : lead.pincode;
+    const panVal = edits.pan !== undefined ? edits.pan : lead.pan;
+    const statusVal = edits.status !== undefined ? edits.status : lead.verification_status;
+
+    if (!pincodeVal || !panVal || !statusVal) {
+      addToast('warning', 'Validation Error', 'Pincode, PAN Card, and Status are required.');
+      return;
+    }
+
+    // PAN Validation
+    const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+    if (!panRegex.test(panVal.toUpperCase().trim())) {
+      addToast('warning', 'Invalid PAN', 'PAN Card must be in ABCDE1234F format.');
+      return;
+    }
+
+    // Pincode Validation
+    const pincodeRegex = /^[0-9]{6}$/;
+    if (!pincodeRegex.test(pincodeVal.trim())) {
+      addToast('warning', 'Invalid Pincode', 'Pincode must be a 6-digit number.');
+      return;
+    }
+
+    setSavingRow(lead._id);
+    try {
+      // Map display status to pipeline status
+      let newStatus = lead.status;
+      if (statusVal === 'Listed Pincode') {
+        newStatus = 'eligible';
+      } else if (statusVal === 'Pincode Not Listed') {
+        newStatus = 'rejected';
+      } else if (statusVal === 'Fresh') {
+        newStatus = 'assigned';
+      } else if (statusVal === 'Follow Up' || statusVal === 'Exception') {
+        newStatus = 'in_progress';
+      }
+
+      const res = await leadsApi.updateLead(lead._id, {
+        pincode: pincodeVal.trim(),
+        pan: panVal.toUpperCase().trim(),
+        verification_status: statusVal,
+        status: newStatus,
+        notes: `Row updated on My Leads: ${statusVal}`
+      });
+
+      if (res.success) {
+        addToast('success', 'Lead Saved', `Lead ${lead.customer_name} updated successfully.`);
+        setEditedLeads(prev => {
+          const updated = { ...prev };
+          delete updated[lead._id];
+          return updated;
+        });
+        fetchLeads();
+      }
+    } catch (err) {
+      addToast('error', 'Save Failed', 'Could not save lead changes.');
+    } finally {
+      setSavingRow(null);
+    }
+  };
 
   const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
@@ -285,7 +373,135 @@ export function LeadsPage({ onNav }) {
         ) : (
           <>
             <Table
-              columns={[
+              columns={isAgent ? [
+                { 
+                  key: 'lead_number', 
+                  label: '#', 
+                  muted: true, 
+                  render: (v) => <span className="font-mono text-[11px] tracking-tight">{v}</span> 
+                },
+                { 
+                  key: 'customer_name', 
+                  label: 'Customer', 
+                  render: (v) => (
+                    <div className="flex items-center gap-3">
+                      <Avatar name={v} size="xs" />
+                      <span className="font-bold">{v}</span>
+                    </div>
+                  ) 
+                },
+                { 
+                  key: 'mobile', 
+                  label: 'Mobile', 
+                  muted: true, 
+                  render: (v) => <span className="font-mono text-xs">{v}</span> 
+                },
+                { 
+                  key: 'pincode', 
+                  label: 'Pincode', 
+                  render: (v, r) => (
+                    <input
+                      type="text"
+                      className="w-20 px-2 py-1 text-xs border rounded bg-background dark:bg-background-dark border-border-light dark:border-border-dark font-mono focus:ring-1 focus:ring-accent"
+                      value={getRowValue(r, 'pincode')}
+                      onChange={(e) => handleRowChange(r._id, 'pincode', e.target.value)}
+                      maxLength={6}
+                    />
+                  ) 
+                },
+                { 
+                  key: 'pan', 
+                  label: 'PAN Card', 
+                  render: (v, r) => (
+                    <input
+                      type="text"
+                      className="w-28 px-2 py-1 text-xs border rounded bg-background dark:bg-background-dark border-border-light dark:border-border-dark font-mono uppercase focus:ring-1 focus:ring-accent"
+                      value={getRowValue(r, 'pan')}
+                      onChange={(e) => handleRowChange(r._id, 'pan', e.target.value.toUpperCase())}
+                      maxLength={10}
+                      placeholder="ABCDE1234F"
+                    />
+                  ) 
+                },
+                { 
+                  key: 'status', 
+                  label: 'Status', 
+                  render: (v, r) => (
+                    <select
+                      className="w-36 px-2 py-1 text-xs border rounded bg-background dark:bg-background-dark border-border-light dark:border-border-dark font-semibold focus:ring-1 focus:ring-accent"
+                      value={getRowValue(r, 'status')}
+                      onChange={(e) => handleRowChange(r._id, 'status', e.target.value)}
+                    >
+                      <option value="">Select status...</option>
+                      <option value="Listed Pincode">Listed Pincode</option>
+                      <option value="Pincode Not Listed">Pincode Not Listed</option>
+                      <option value="Fresh">Fresh</option>
+                      <option value="Follow Up">Follow Up</option>
+                      <option value="Exception">Exception</option>
+                    </select>
+                  ) 
+                },
+                { 
+                  key: 'qd_status', 
+                  label: 'QD', 
+                  render: (v, r) => {
+                    if (r.status === 'qd_submitted' || r.status === 'dispatched' || r.status === 'closed') {
+                      return <Badge label="Generated" color="success" />;
+                    }
+                    if (r.status === 'eligible') {
+                      return (
+                        <Button 
+                          size="xs" 
+                          onClick={() => {
+                            onNav('sp-qd');
+                          }}
+                        >
+                          Generate QD
+                        </Button>
+                      );
+                    }
+                    return <span className="text-text-muted text-xs">—</span>;
+                  }
+                },
+                { 
+                  key: 'granted_qd', 
+                  label: 'Granted QD', 
+                  render: (v, r) => {
+                    if (r.status === 'dispatched' || r.status === 'closed') {
+                      return <Badge label="Granted" color="success" />;
+                    }
+                    if (r.status === 'qd_submitted') {
+                      return <Badge label="Pending Review" color="warning" />;
+                    }
+                    return <span className="text-text-muted text-xs">—</span>;
+                  }
+                },
+                { 
+                  key: '_id', 
+                  label: 'Actions', 
+                  render: (v, r) => {
+                    const isEdited = editedLeads[r._id] !== undefined;
+                    return (
+                      <div className="flex items-center gap-1.5">
+                        <Button 
+                          size="xs" 
+                          variant={isEdited ? 'default' : 'ghost'}
+                          disabled={savingRow === r._id}
+                          onClick={() => handleSaveRow(r)}
+                        >
+                          {savingRow === r._id ? 'Saving...' : 'Save'}
+                        </Button>
+                        <Button 
+                          size="xs" 
+                          variant="ghost" 
+                          icon={Eye} 
+                          onClick={(e) => { e.stopPropagation(); setSelectedLead(r); }}
+                        />
+                      </div>
+                    );
+                  } 
+                },
+              ] : [
                 { 
                   key: 'lead_number', 
                   label: '#', 
@@ -314,7 +530,7 @@ export function LeadsPage({ onNav }) {
                   muted: true, 
                   render: (v) => <span className="font-mono text-xs">{v}</span> 
                 },
-                ...(!isAgent ? [{ key: 'assigned_to', label: 'Agent', render: (v) => v?.name || '—', muted: true }] : []),
+                { key: 'assigned_to', label: 'Agent', render: (v) => v?.name || '—', muted: true },
                 { 
                   key: 'call_status', 
                   label: 'Status', 
@@ -410,6 +626,10 @@ export function LeadsPage({ onNav }) {
                 <InfoRow label="Name" value={selectedLead.customer_name || '—'} />
                 <InfoRow label="Mobile" value={selectedLead.mobile || '—'} mono />
                 <InfoRow label="Pincode" value={selectedLead.pincode || '—'} mono />
+                <InfoRow label="PAN Number" value={selectedLead.pan || '—'} mono />
+                <InfoRow label="Verification Status" value={selectedLead.verification_status || '—'} />
+                <InfoRow label="Father's Name" value={selectedLead.father_name || '—'} />
+                <InfoRow label="Mother's Name" value={selectedLead.mother_name || '—'} />
                 <InfoRow label="State" value={selectedLead.state || '—'} />
                 <InfoRow label="District" value={selectedLead.district || '—'} />
                 <InfoRow label="Pipeline Stage" value={<Badge label={(selectedLead.status || 'new').replace(/_/g, ' ')} color={selectedLead.status || 'new'} />} />

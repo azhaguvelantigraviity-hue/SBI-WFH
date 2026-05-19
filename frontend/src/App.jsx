@@ -106,7 +106,7 @@ function App() {
       case 'sp-call':
         return <CallCustomerPage />;
       case 'sp-verify':
-        return <VerificationPage />;
+        return <VerificationPage onNav={setPage} />;
       case 'sp-qd':
         return <QDFormPage />;
       case 'sp-docs':

@@ -15,7 +15,8 @@ import {
   FileCheck,
   Files,
   UserCircle,
-  AlertCircle
+  AlertCircle,
+  Landmark
 } from 'lucide-react';
 
 export const ADMIN_NAV = [
@@ -62,12 +63,12 @@ export const SALES_NAV = [
     section: 'Leads', 
     items: [
       { id: 'sp-leads', icon: FileText, label: 'My Leads', badge: 18 },
+      { id: 'sp-qd', icon: FileCheck, label: 'QD Form', badge: 3, badgeColor: 'warning' },
     ]
   },
   { 
     section: 'Personal', 
     items: [
-      { id: 'sp-incentives', icon: Award, label: 'My Incentives' },
       { id: 'sp-profile', icon: UserCircle, label: 'Profile' },
     ]
   },

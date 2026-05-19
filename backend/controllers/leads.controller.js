@@ -66,7 +66,7 @@ exports.getLeadById = async (req, res) => {
 
 // ─── @POST /api/leads ─────────────────────────────────────────────────────────
 exports.createLead = async (req, res) => {
-  const { customer_name, mobile, pincode, state, district, address, assigned_to, notes } = req.body;
+  const { customer_name, mobile, pincode, state, district, address, assigned_to, notes, pan, father_name, mother_name, verification_status } = req.body;
 
   const lead = await Lead.create({
     customer_name,
@@ -75,6 +75,10 @@ exports.createLead = async (req, res) => {
     state,
     district,
     address,
+    pan,
+    father_name,
+    mother_name,
+    verification_status,
     assigned_to: assigned_to || null,
     status: assigned_to ? 'assigned' : 'new',
     source: 'manual',
@@ -101,7 +105,7 @@ exports.updateLead = async (req, res) => {
   const lead = await Lead.findById(req.params.id);
   if (!lead) return res.status(404).json({ success: false, message: 'Lead not found' });
 
-  const { status, assigned_to, notes, address, pincode, state, district } = req.body;
+  const { status, assigned_to, notes, address, pincode, state, district, pan, father_name, mother_name, verification_status } = req.body;
 
   // Track status changes in history
   if (status && status !== lead.status) {
@@ -137,6 +141,10 @@ exports.updateLead = async (req, res) => {
   if (pincode !== undefined) lead.pincode = pincode;
   if (state !== undefined) lead.state = state;
   if (district !== undefined) lead.district = district;
+  if (pan !== undefined) lead.pan = pan;
+  if (father_name !== undefined) lead.father_name = father_name;
+  if (mother_name !== undefined) lead.mother_name = mother_name;
+  if (verification_status !== undefined) lead.verification_status = verification_status;
 
   await lead.save();
   await lead.populate('assigned_to', 'name employee_id');

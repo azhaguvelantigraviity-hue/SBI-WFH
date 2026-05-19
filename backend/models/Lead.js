@@ -37,6 +37,10 @@ const leadSchema = new mongoose.Schema(
     state: { type: String, trim: true },
     district: { type: String, trim: true },
     address: { type: String, trim: true },
+    pan: { type: String, trim: true },
+    father_name: { type: String, trim: true },
+    mother_name: { type: String, trim: true },
+    verification_status: { type: String, trim: true },
     status: {
       type: String,
       enum: LEAD_STATUSES,
