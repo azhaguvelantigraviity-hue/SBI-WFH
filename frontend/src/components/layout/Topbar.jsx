@@ -194,7 +194,7 @@ export function Topbar({ title }) {
             <h4 className="text-xs font-bold text-text-primary dark:text-text-dark-primary">{auth?.name}</h4>
             <p className="text-[10px] text-text-muted font-medium uppercase tracking-wider">{auth?.role?.replace('_', ' ')}</p>
           </div>
-          <Avatar name={auth?.name} size="sm" />
+          <Avatar name={auth?.name} src={auth?.user?.avatar} size="sm" />
         </div>
       </div>
     </header>

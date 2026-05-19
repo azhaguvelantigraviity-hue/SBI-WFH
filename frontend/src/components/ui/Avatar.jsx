@@ -1,7 +1,7 @@
 import React from 'react';
 import { cn } from '../../utils/cn';
 
-export function Avatar({ name, size = 'md', className }) {
+export function Avatar({ name, src, size = 'md', className }) {
   const sizes = {
     xs: 'w-6 h-6 text-[10px]',
     sm: 'w-8 h-8 text-[12px]',
@@ -24,9 +24,23 @@ export function Avatar({ name, size = 'md', className }) {
       'from-info to-purple',
       'from-purple to-danger',
     ];
-    const charCodeSum = n.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    const charCodeSum = (n || '').split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
     return colors[charCodeSum % colors.length];
   };
+
+  if (src) {
+    return (
+      <img
+        src={src}
+        alt={name || 'Avatar'}
+        className={cn(
+          "rounded-full object-cover shrink-0 shadow-sm border-2 border-white dark:border-border-dark",
+          sizes[size] || size,
+          className
+        )}
+      />
+    );
+  }
 
   return (
     <div

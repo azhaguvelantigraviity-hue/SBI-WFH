@@ -191,7 +191,7 @@ export function Sidebar({ activePage, onPageChange }) {
         {/* User Info */}
         <div className="flex items-center gap-3 p-1">
           <div className="relative">
-            <Avatar name={auth?.name} size="sm" className="ring-2 ring-accent/20" />
+            <Avatar name={auth?.name} src={auth?.user?.avatar} size="sm" className="ring-2 ring-accent/20" />
             <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-success border-2 border-white dark:border-card-dark rounded-full" />
           </div>
           <div className="flex-1 min-w-0">

@@ -7,6 +7,8 @@ import { useAuth } from '../../context/AuthContext';
 import { usersApi } from '../../api/usersApi';
 import { useToast } from '../../context/ToastContext';
 import { cn } from '../../utils/cn';
+import { Avatar } from '../../components/ui/Avatar';
+import { Camera } from 'lucide-react';
 
 export function MyProfilePage() {
   const { auth, setAuth } = useAuth();
@@ -16,10 +18,28 @@ export function MyProfilePage() {
     name: auth?.user?.name || '',
     mobile: auth?.user?.mobile || '',
     email: auth?.user?.email || '',
+    avatar: auth?.user?.avatar || '',
     password: ''
   });
 
   const [saving, setSaving] = useState(false);
+
+  const handleAvatarChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      addToast('warning', 'File Too Large', 'Please select an image smaller than 2MB.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setForm(prev => ({ ...prev, avatar: reader.result }));
+      addToast('info', 'Photo Selected', 'Click Update Profile below to save your new photo.');
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleUpdate = async (e) => {
     e.preventDefault();
@@ -40,6 +60,7 @@ export function MyProfilePage() {
           name: res.data.name || auth.user.name,
           mobile: res.data.mobile || auth.user.mobile,
           email: res.data.email || auth.user.email,
+          avatar: res.data.avatar || auth.user.avatar,
         };
 
         const updatedAuth = {
@@ -72,8 +93,23 @@ export function MyProfilePage() {
         {/* Profile Edit Panel */}
         <Card className="p-8">
           <div className="flex flex-col items-center mb-8">
-            <div className="w-24 h-24 rounded-full bg-gradient-to-tr from-accent to-purple-500 flex items-center justify-center text-3xl font-bold text-white shadow-lg mb-4">
-              {getInitials(auth?.user?.name)}
+            <div className="relative group cursor-pointer mb-4">
+              <Avatar 
+                name={auth?.user?.name} 
+                src={form.avatar} 
+                size="xl" 
+                className="w-24 h-24 shadow-lg transition-transform duration-300 group-hover:scale-105" 
+              />
+              <label className="absolute inset-0 bg-black/60 rounded-full flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 text-white cursor-pointer select-none">
+                <Camera className="w-5 h-5 mb-1 text-accent-light" />
+                <span className="text-[10px] font-bold uppercase tracking-wider">Change</span>
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  className="hidden" 
+                  onChange={handleAvatarChange} 
+                />
+              </label>
             </div>
             <h2 className="text-xl font-bold text-text-primary dark:text-text-dark-primary">{auth?.user?.name}</h2>
             <p className="text-sm text-text-muted mt-1">Employee ID: {auth?.user?.employee_id || 'EMP001'}</p>
