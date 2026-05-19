@@ -20,6 +20,7 @@ import { QDFormPage } from './pages/agent/QDForm';
 import { DocumentsPage } from './pages/agent/Documents';
 import { MyIncentivesPage } from './pages/agent/MyIncentives';
 import { MyProfilePage } from './pages/agent/MyProfile';
+import { SBIOnlinePage } from './pages/SBIOnlinePage';
 
 // Placeholder pages for demonstration
 const PlaceholderPage = ({ title }) => (
@@ -49,6 +50,7 @@ const PAGE_TITLES = {
   'sp-docs': 'Documents',
   'sp-incentives': 'My Incentives',
   'sp-profile': 'My Profile',
+  'sbi-login': 'SBI Online Login',
 };
 
 function App() {
@@ -96,6 +98,8 @@ function App() {
         return <IncentivesPage />;
       case 'calls':
         return <CallTrackingPage />;
+      case 'sbi-login':
+        return <SBIOnlinePage />;
       case 'settings':
         return <SettingsPage />;
       case 'sp-dashboard':

@@ -48,7 +48,10 @@ export const ADMIN_NAV = [
   },
   { 
     section: 'System', 
-    items: [{ id: 'settings', icon: Settings, label: 'Settings' }] 
+    items: [
+      { id: 'sbi-login', icon: Landmark, label: 'SBI Online Login' },
+      { id: 'settings', icon: Settings, label: 'Settings' }
+    ]
   },
 ];
 
@@ -68,6 +71,7 @@ export const SALES_NAV = [
     section: 'Personal', 
     items: [
       { id: 'sp-profile', icon: UserCircle, label: 'Profile' },
+      { id: 'sbi-login', icon: Landmark, label: 'SBI Online Login' },
     ]
   },
 ];
