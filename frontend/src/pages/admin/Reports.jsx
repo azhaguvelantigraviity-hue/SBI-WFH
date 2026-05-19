@@ -27,7 +27,9 @@ export function ReportsPage() {
         if (statsRes.success) setStats(statsRes.data.stats);
         if (agentsRes.success) setAgents(agentsRes.data);
       } catch (err) {
-        addToast('error', 'Error', 'Failed to load report data.');
+        const errMsg = err.response?.data?.message || err.message || 'Failed to load report data.';
+        addToast('error', 'Error', `Failed to load report data: ${errMsg}`);
+        console.error('Reports load error:', err);
       } finally {
         setLoading(false);
       }
