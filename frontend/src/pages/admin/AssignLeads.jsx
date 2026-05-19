@@ -24,14 +24,12 @@ export function AssignLeadsPage() {
     setLoading(true);
     try {
       const [leadsRes, agentsRes] = await Promise.all([
-        leadsApi.getLeads({ status: 'new', limit: 100 }), // Get unassigned leads
+        leadsApi.getLeads({ status: 'new', assigned_to: 'unassigned', limit: 100 }), // Get unassigned leads
         usersApi.getUsers({ role: 'sales_person' })
       ]);
 
       if (leadsRes.success) {
-        // Filter those without assigned_to
-        const unassigned = leadsRes.data.filter(l => !l.assigned_to);
-        setLeads(unassigned);
+        setLeads(leadsRes.data);
       }
       if (agentsRes.success) {
         setAgents(agentsRes.data);
@@ -80,10 +78,7 @@ export function AssignLeadsPage() {
 
     setAssigning(true);
     try {
-      // Execute sequentially or Promise.all. Here we use Promise.all for speed.
-      await Promise.all(idsToAssign.map(id => 
-        leadsApi.updateLead(id, { assigned_to: selectedAgent, status: 'assigned' })
-      ));
+      await leadsApi.bulkAssign(idsToAssign, selectedAgent);
 
       addToast('success', 'Leads Assigned', `Successfully assigned ${idsToAssign.length} leads.`);
       

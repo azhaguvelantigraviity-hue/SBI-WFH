@@ -12,7 +12,13 @@ exports.getLeads = async (req, res) => {
   if (req.user.role === 'sales_person') {
     filter.assigned_to = req.user._id;
   } else {
-    if (assigned_to) filter.assigned_to = assigned_to;
+    if (assigned_to) {
+      if (assigned_to === 'null' || assigned_to === 'unassigned') {
+        filter.assigned_to = null;
+      } else {
+        filter.assigned_to = assigned_to;
+      }
+    }
   }
 
   if (status && status !== 'all') filter.status = status;
@@ -203,4 +209,45 @@ exports.bulkImport = async (req, res) => {
   }
 
   res.status(201).json({ success: true, results });
+};
+
+// ─── @POST /api/leads/bulk-assign ───────────────────────────────────────────
+exports.bulkAssign = async (req, res) => {
+  const { leadIds, assigned_to } = req.body;
+
+  if (!Array.isArray(leadIds) || leadIds.length === 0) {
+    return res.status(400).json({ success: false, message: 'leadIds must be a non-empty array' });
+  }
+
+  if (!assigned_to) {
+    return res.status(400).json({ success: false, message: 'assigned_to is required' });
+  }
+
+  // Update leads in bulk
+  await Lead.updateMany(
+    { _id: { $in: leadIds } },
+    { 
+      assigned_to, 
+      status: 'assigned',
+      $push: { 
+        status_history: { 
+          status: 'assigned', 
+          changed_by: req.user._id 
+        } 
+      }
+    }
+  );
+
+  // Trigger notifications
+  const leads = await Lead.find({ _id: { $in: leadIds } });
+  for (const lead of leads) {
+    await Notification.create({
+      user: assigned_to,
+      title: 'New Lead Assigned',
+      message: `Lead ${lead.lead_number} (${lead.customer_name}) has been assigned to you.`,
+      type: 'lead_assigned',
+    });
+  }
+
+  res.json({ success: true, message: `Successfully assigned ${leadIds.length} leads.` });
 };

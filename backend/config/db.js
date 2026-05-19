@@ -1,7 +1,16 @@
 const mongoose = require('mongoose');
+const dns = require('dns');
 
 const connectDB = async () => {
   try {
+    // Set DNS servers to Google Public DNS to resolve MongoDB Atlas SRV records
+    try {
+      dns.setServers(['8.8.8.8', '8.8.4.4']);
+      console.log('🌐 Configured Google DNS for Atlas SRV resolution');
+    } catch (dnsErr) {
+      console.warn('⚠️ Failed to configure public DNS servers:', dnsErr.message);
+    }
+
     const conn = await mongoose.connect(process.env.MONGO_URI, {
       serverSelectionTimeoutMS: 5000,
     });

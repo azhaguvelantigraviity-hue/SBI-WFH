@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: sbi-sales-tracker-backend
+    env: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGO_URI
+        value: mongodb+srv://azhaguvelantigraviity_db_user:azhagu%40123@wfmportal.zuxv3a4.mongodb.net/?appName=wfmportal
+      - key: JWT_SECRET
+        value: sbi_sales_jwt_super_secret_key_2025
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: CLIENT_ORIGIN
+        value: https://frontend-black-seven-97.vercel.app

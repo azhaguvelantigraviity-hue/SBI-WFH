@@ -41,6 +41,7 @@ export function SalesPersonsPage() {
     setLoading(true);
     try {
       const res = await usersApi.getUsers({
+        role: 'sales_person',
         status: tab !== 'all' ? tab : undefined,
         search
       });

@@ -44,7 +44,7 @@ export function Sidebar({ activePage, onPageChange }) {
         const [usersRes, leadsRes, assignRes, qdRes] = await Promise.all([
           usersApi.getUsers({ role: 'sales_person' }),
           leadsApi.getLeads({ limit: 1 }),
-          leadsApi.getLeads({ status: 'new', limit: 1 }),
+          leadsApi.getLeads({ status: 'new', assigned_to: 'unassigned', limit: 1 }),
           qdApi.getQDs({ status: 'pending', limit: 1 })
         ]);
         

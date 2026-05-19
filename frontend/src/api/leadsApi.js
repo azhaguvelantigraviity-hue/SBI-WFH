@@ -18,4 +18,7 @@ export const leadsApi = {
 
   bulkImport: (leads, autoAssign = false) =>
     api.post('/leads/bulk-import', { leads, autoAssign }).then(r => r.data),
+
+  bulkAssign: (leadIds, assigned_to) =>
+    api.post('/leads/bulk-assign', { leadIds, assigned_to }).then(r => r.data),
 };
