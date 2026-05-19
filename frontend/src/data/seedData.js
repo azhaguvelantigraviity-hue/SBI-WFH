@@ -44,8 +44,6 @@ export const ADMIN_NAV = [
     section: 'Analytics', 
     items: [
       { id: 'reports', icon: PieChart, label: 'Reports' },
-      { id: 'incentives', icon: Award, label: 'Incentives' },
-      { id: 'calls', icon: PhoneCall, label: 'Call Tracking' },
     ]
   },
   { 
