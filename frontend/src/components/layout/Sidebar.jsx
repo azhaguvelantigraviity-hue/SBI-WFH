@@ -80,20 +80,18 @@ export function Sidebar({ activePage, onPageChange }) {
       <div className="p-6 border-b border-border-light dark:border-border-dark">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 select-none shrink-0">
-            <svg viewBox="0 0 400 400" className="w-full h-full">
-              <path d="M 120 70 L 280 70 L 280 120 L 170 120 L 170 270 L 120 270 Z" fill="#0057b7" />
-              <polygon points="200,215 130,285 270,285" fill="#ffd800" />
-              <rect x="180" y="145" width="60" height="35" fill="#ffd800" />
-              <path d="M 195 167 C 195 160, 202 153, 210 153 C 218 153, 225 160, 225 167 C 225 174, 222 176, 218 172 C 215 170, 212 170, 210 172 C 208 174, 205 174, 203 170 C 200 167, 195 170, 195 167 Z" fill="#0057b7" />
+            <svg viewBox="0 0 100 100" className="w-full h-full">
+              <circle cx="50" cy="50" r="45" fill="#00a4e4" />
+              <circle cx="50" cy="50" r="15" fill="#fff" />
+              <rect x="46" y="50" width="8" height="45" fill="#fff" />
             </svg>
           </div>
           <div>
-            <h1 className="font-bold text-base leading-tight select-none">
-              <span className="text-[#0057b7] dark:text-[#3b82f6]">FORGE</span>{' '}
-              <span className="text-[#ffd800] dark:text-[#fbbf24]">INDIA</span>
+            <h1 className="font-bold text-sm leading-tight text-text-primary dark:text-text-dark-primary select-none">
+              SBI Online Login
             </h1>
-            <p className="text-[9px] font-extrabold text-text-muted tracking-wide uppercase opacity-70 leading-normal">
-              CONNECT PVT.LTD
+            <p className="text-[9px] font-extrabold text-text-muted tracking-widest uppercase opacity-75">
+              WFH PORTAL
             </p>
           </div>
         </div>
