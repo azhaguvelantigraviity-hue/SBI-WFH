@@ -69,7 +69,7 @@ export function AdminDashboard({ onNav }) {
       />
 
       {/* Primary Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
         <Stat 
           label="Total Leads" 
           value={stats.total_leads.toLocaleString()} 
@@ -90,6 +90,20 @@ export function AdminDashboard({ onNav }) {
           icon={ArrowUpRight} 
           trend="+18%" 
           color="warning" 
+        />
+        <Stat 
+          label="Follow-ups" 
+          value={(stats.follow_ups || 0).toLocaleString()} 
+          icon={Clock} 
+          color="amber" 
+          onClick={() => onNav('exceptions')}
+        />
+        <Stat 
+          label="Exceptions" 
+          value={(stats.exceptions || 0).toLocaleString()} 
+          icon={AlertCircle} 
+          color="red" 
+          onClick={() => onNav('exceptions')}
         />
         <Stat 
           label="Net Incentives" 

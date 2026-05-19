@@ -3,7 +3,7 @@ import { cn } from '../../utils/cn';
 import { Card } from './Card';
 import { TrendingUp, TrendingDown } from 'lucide-react';
 
-export function Stat({ label, value, delta, color = 'accent', icon: Icon, className }) {
+export function Stat({ label, value, delta, color = 'accent', icon: Icon, className, onClick, ...props }) {
   const colors = {
     accent: 'text-accent',
     green: 'text-success',
@@ -27,7 +27,7 @@ export function Stat({ label, value, delta, color = 'accent', icon: Icon, classN
   const isPositive = delta?.startsWith('+');
 
   return (
-    <Card hover className={cn("relative overflow-hidden group", className)}>
+    <Card hover className={cn("relative overflow-hidden group", className, onClick && "cursor-pointer select-none")} onClick={onClick} {...props}>
       {/* Top accent line */}
       <div className={cn("absolute top-0 left-0 right-0 h-0.5 opacity-80 transition-all group-hover:h-1", 
         color === 'accent' ? 'bg-accent' : 

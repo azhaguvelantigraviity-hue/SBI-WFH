@@ -19,6 +19,8 @@ exports.getStats = async (req, res) => {
     topPerformers,
     recentLeads,
     recentCalls,
+    followUps,
+    exceptions,
   ] = await Promise.all([
     Lead.countDocuments(),
     Lead.countDocuments({ status: 'eligible' }),
@@ -58,6 +60,8 @@ exports.getStats = async (req, res) => {
     ]),
     Lead.find().sort({ createdAt: -1 }).limit(5).populate('assigned_to', 'name'),
     Call.find().sort({ called_at: -1 }).limit(5).populate('agent', 'name'),
+    Lead.countDocuments({ call_status: 'follow_up' }),
+    Lead.countDocuments({ call_status: 'exception' }),
   ]);
 
   const totalPaid = totalIncentivePaid[0]?.total || 0;
@@ -78,6 +82,8 @@ exports.getStats = async (req, res) => {
         connected_calls: connectedCalls,
         total_incentive_paid: totalPaid,
         connection_rate: totalCalls > 0 ? Math.round((connectedCalls / totalCalls) * 100) : 0,
+        follow_ups: followUps,
+        exceptions: exceptions,
       },
       status_breakdown: statusMap,
       top_performers: topPerformers,

@@ -1,7 +1,7 @@
 import React from 'react';
 import { cn } from '../../utils/cn';
 
-export function Card({ children, className, hover = false, padding = true }) {
+export function Card({ children, className, hover = false, padding = true, ...props }) {
   return (
     <div
       className={cn(
@@ -10,6 +10,7 @@ export function Card({ children, className, hover = false, padding = true }) {
         hover && 'hover:border-accent/40 hover:-translate-y-0.5 hover:shadow-premium dark:hover:shadow-premium-dark',
         className
       )}
+      {...props}
     >
       {children}
     </div>
