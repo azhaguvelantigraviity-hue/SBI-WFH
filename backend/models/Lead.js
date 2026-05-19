@@ -37,6 +37,7 @@ const leadSchema = new mongoose.Schema(
     state: { type: String, trim: true },
     district: { type: String, trim: true },
     address: { type: String, trim: true },
+    landmark: { type: String, trim: true },
     pan: { type: String, trim: true },
     father_name: { type: String, trim: true },
     mother_name: { type: String, trim: true },

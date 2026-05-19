@@ -448,19 +448,17 @@ export function LeadsPage({ onNav }) {
                     if (r.status === 'qd_submitted' || r.status === 'dispatched' || r.status === 'closed') {
                       return <Badge label="Generated" color="success" />;
                     }
-                    if (r.status === 'eligible') {
-                      return (
-                        <Button 
-                          size="xs" 
-                          onClick={() => {
-                            onNav('sp-qd');
-                          }}
-                        >
-                          Generate QD
-                        </Button>
-                      );
-                    }
-                    return <span className="text-text-muted text-xs">—</span>;
+                    return (
+                      <Button 
+                        size="xs" 
+                        onClick={() => {
+                          localStorage.setItem('selectedLeadId', r._id);
+                          onNav('sp-qd');
+                        }}
+                      >
+                        Generate QD
+                      </Button>
+                    );
                   }
                 },
                 { 

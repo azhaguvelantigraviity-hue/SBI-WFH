@@ -30,14 +30,17 @@ export function QDFormPage() {
     father_name: '',
     mother_name: '',
     address: '',
+    landmark: '',
     employment_type: '',
     designation: '',
     monthly_salary: '',
     employer_name: '',
     employer_address: '',
+    office_landmark: '',
     business_name: '',
     gst_number: '',
     business_nature: '',
+    business_landmark: '',
   });
 
   const [docs, setDocs] = useState({
@@ -51,8 +54,18 @@ export function QDFormPage() {
       try {
         const res = await leadsApi.getLeads({ limit: 100 });
         if (res.success) {
-          const eligible = res.data.filter(l => l.status === 'eligible');
-          setLeads(eligible);
+          const unsubmitted = res.data.filter(l => 
+            l.status !== 'qd_submitted' && 
+            l.status !== 'dispatched' && 
+            l.status !== 'closed'
+          );
+          setLeads(unsubmitted);
+          
+          const savedLeadId = localStorage.getItem('selectedLeadId');
+          if (savedLeadId) {
+            setSelectedLeadId(savedLeadId);
+            localStorage.removeItem('selectedLeadId');
+          }
         }
       } catch (err) {
         addToast('error', 'Error', 'Failed to load eligible leads.');
@@ -64,6 +77,18 @@ export function QDFormPage() {
   }, []);
 
   const activeLead = leads.find(l => l._id === selectedLeadId);
+
+  useEffect(() => {
+    if (activeLead) {
+      setForm(prev => ({
+        ...prev,
+        father_name: activeLead.father_name || '',
+        mother_name: activeLead.mother_name || '',
+        address: activeLead.address || '',
+        landmark: activeLead.landmark || '',
+      }));
+    }
+  }, [activeLead]);
 
   const handleNext = () => {
     if (step === 1 && (!form.address)) {
@@ -86,10 +111,20 @@ export function QDFormPage() {
   const handleSubmit = async () => {
     setSubmitting(true);
     try {
+      // Sync address and landmark back to the lead in DB
+      await leadsApi.updateLead(activeLead._id, {
+        address: form.address,
+        landmark: form.landmark,
+        father_name: form.father_name,
+        mother_name: form.mother_name,
+      });
+
       // 1. Submit QD Data
       let extraNotes = '';
       if (form.employment_type === 'self_employed') {
-        extraNotes = ` | Biz: ${form.business_name} | GST: ${form.gst_number || 'N/A'} | Nature: ${form.business_nature}`;
+        extraNotes = ` | Biz: ${form.business_name} | GST: ${form.gst_number || 'N/A'} | Nature: ${form.business_nature} | Biz Landmark: ${form.business_landmark || 'N/A'}`;
+      } else if (form.employment_type === 'salaried') {
+        extraNotes = ` | Office Landmark: ${form.office_landmark || 'N/A'}`;
       }
 
       const qdPayload = {
@@ -98,7 +133,7 @@ export function QDFormPage() {
         monthly_income: parseInt(form.monthly_salary) || 0,
         annual_income: (parseInt(form.monthly_salary) || 0) * 12,
         employer_name: form.employer_name || form.business_name,
-        notes: `Address: ${form.address} | Father: ${form.father_name} | Mother: ${form.mother_name} | Role: ${form.designation} | Office: ${form.employer_address}${extraNotes}`,
+        notes: `Address: ${form.address} | Landmark: ${form.landmark || 'N/A'} | Father: ${form.father_name} | Mother: ${form.mother_name} | Role: ${form.designation} | Office: ${form.employer_address}${extraNotes}`,
       };
 
       const qdRes = await qdApi.submitQD(qdPayload);
@@ -126,10 +161,10 @@ export function QDFormPage() {
         setSelectedLeadId('');
         setStep(1);
         setForm({
-          father_name: '', mother_name: '', address: '', 
+          father_name: '', mother_name: '', address: '', landmark: '',
           employment_type: '', designation: '', monthly_salary: '', 
-          employer_name: '', employer_address: '',
-          business_name: '', gst_number: '', business_nature: ''
+          employer_name: '', employer_address: '', office_landmark: '',
+          business_name: '', gst_number: '', business_nature: '', business_landmark: ''
         });
         setDocs({ payslips: null, bank_statement: null, shop_photo: null });
         setLeads(leads.filter(l => l._id !== activeLead._id));
@@ -299,6 +334,14 @@ export function QDFormPage() {
                 className="w-full bg-background-dark/5 dark:bg-background/5 border border-border-light dark:border-border-dark rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent min-h-[100px] resize-none"
               />
             </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Landmark (Residential)</label>
+              <Input 
+                placeholder="e.g. Near City Mall"
+                value={form.landmark}
+                onChange={e => setForm({...form, landmark: e.target.value})}
+              />
+            </div>
           </div>
         )}
 
@@ -354,6 +397,14 @@ export function QDFormPage() {
                     className="w-full bg-background-dark/5 dark:bg-background/5 border border-border-light dark:border-border-dark rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent min-h-[80px] resize-none"
                   />
                 </div>
+                <div className="md:col-span-2">
+                  <Input 
+                    label="Landmark (Office)" 
+                    placeholder="e.g. Behind Metro Station"
+                    value={form.office_landmark}
+                    onChange={e => setForm({...form, office_landmark: e.target.value})}
+                  />
+                </div>
               </div>
             )}
 
@@ -386,6 +437,14 @@ export function QDFormPage() {
                     value={form.employer_address} // Reusing employer_address for business address
                     onChange={e => setForm({...form, employer_address: e.target.value})}
                     className="w-full bg-background-dark/5 dark:bg-background/5 border border-border-light dark:border-border-dark rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent min-h-[80px] resize-none"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <Input 
+                    label="Landmark (Business)" 
+                    placeholder="e.g. Opposite State Bank"
+                    value={form.business_landmark}
+                    onChange={e => setForm({...form, business_landmark: e.target.value})}
                   />
                 </div>
                 <div className="md:col-span-2 space-y-1.5">
