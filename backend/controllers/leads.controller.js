@@ -162,7 +162,7 @@ exports.deleteLead = async (req, res) => {
 // ─── @POST /api/leads/bulk-import ────────────────────────────────────────────
 exports.bulkImport = async (req, res) => {
   const { leads } = req.body;
-  const autoAssign = req.body.autoAssign === true || req.body.autoAssign === 'true';
+  const autoAssign = req.body.autoAssign !== false && req.body.autoAssign !== 'false';
 
   if (!Array.isArray(leads) || leads.length === 0) {
     return res.status(400).json({ success: false, message: 'leads must be a non-empty array' });
