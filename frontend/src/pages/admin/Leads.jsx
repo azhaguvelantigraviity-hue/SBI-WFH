@@ -406,7 +406,7 @@ export function LeadsPage({ onNav }) {
                   key: 'pincode', 
                   label: 'Pincode', 
                   render: (v, r) => {
-                    const isCompleted = r.status === 'qd_submitted' || r.status === 'dispatched' || r.status === 'closed' || r.status === 'rejected';
+                    const isCompleted = r.status !== 'new' && r.status !== 'assigned';
                     return (
                       <input
                         type="text"
@@ -423,7 +423,7 @@ export function LeadsPage({ onNav }) {
                   key: 'pan', 
                   label: 'PAN Card', 
                   render: (v, r) => {
-                    const isCompleted = r.status === 'qd_submitted' || r.status === 'dispatched' || r.status === 'closed' || r.status === 'rejected';
+                    const isCompleted = r.status !== 'new' && r.status !== 'assigned';
                     return (
                       <input
                         type="text"
@@ -441,7 +441,7 @@ export function LeadsPage({ onNav }) {
                   key: 'status', 
                   label: 'Status', 
                   render: (v, r) => {
-                    const isCompleted = r.status === 'qd_submitted' || r.status === 'dispatched' || r.status === 'closed' || r.status === 'rejected';
+                    const isCompleted = r.status !== 'new' && r.status !== 'assigned';
                     const currentStatus = getRowValue(r, 'status');
                     const hasNotes = currentStatus === 'Follow Up' || currentStatus === 'Exception';
                     return (
