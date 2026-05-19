@@ -33,7 +33,23 @@ export function MyProfilePage() {
       if (res.success) {
         addToast('success', 'Profile Updated', 'Your profile has been updated successfully.');
         setForm(prev => ({ ...prev, password: '' }));
-        // In a real app, you might want to update the auth context user data here as well
+        
+        // Construct the updated user and auth payload
+        const updatedUser = {
+          ...auth.user,
+          name: res.data.name || auth.user.name,
+          mobile: res.data.mobile || auth.user.mobile,
+          email: res.data.email || auth.user.email,
+        };
+
+        const updatedAuth = {
+          ...auth,
+          user: updatedUser,
+          name: updatedUser.name,
+        };
+
+        setAuth(updatedAuth);
+        localStorage.setItem('auth', JSON.stringify(updatedAuth));
       }
     } catch (err) {
       addToast('error', 'Update Failed', 'Could not update profile.');
