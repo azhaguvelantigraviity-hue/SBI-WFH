@@ -6,6 +6,6 @@ const { getStats, getAgentStats } = require('../controllers/dashboard.controller
 router.use(protect);
 
 router.get('/stats', requireRole('admin'), getStats);
-router.get('/agent-stats', requireRole('sales_person'), getAgentStats);
+router.get('/agent-stats', requireRole('sales_person', 'admin'), getAgentStats);
 
 module.exports = router;
