@@ -16,12 +16,13 @@ import { cn } from '../../utils/cn';
 import { motion, AnimatePresence } from 'framer-motion';
 import { notificationsApi } from '../../api/notificationsApi';
 
-export function Topbar({ title }) {
+export function Topbar({ title, onPageChange }) {
   const { auth } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [activePopup, setActivePopup] = useState(null);
 
   const fetchNotifications = async () => {
     try {
@@ -42,6 +43,37 @@ export function Topbar({ title }) {
     return () => clearInterval(interval);
   }, []);
 
+  // Popup logic for unread alerts on dashboard load / notification update
+  useEffect(() => {
+    if (notifications.length > 0) {
+      const unreadAlerts = notifications.filter(n => {
+        if (n.read) return false;
+        
+        const isTargetType = n.type === 'lead_assigned' || n.type === 'qd_dispatched' || n.type === 'qd_submitted' || n.type === 'system';
+        const hasKeyword = n.title?.toLowerCase().includes('approve') || 
+                            n.title?.toLowerCase().includes('reject') || 
+                            n.title?.toLowerCase().includes('assign') ||
+                            n.message?.toLowerCase().includes('approve') ||
+                            n.message?.toLowerCase().includes('reject') ||
+                            n.message?.toLowerCase().includes('assign');
+                            
+        if (!isTargetType && !hasKeyword) return false;
+
+        const poppedList = JSON.parse(sessionStorage.getItem('popped_notifications') || '[]');
+        return !poppedList.includes(n._id);
+      });
+
+      if (unreadAlerts.length > 0) {
+        const target = unreadAlerts[0];
+        setActivePopup(target);
+        
+        const poppedList = JSON.parse(sessionStorage.getItem('popped_notifications') || '[]');
+        poppedList.push(target._id);
+        sessionStorage.setItem('popped_notifications', JSON.stringify(poppedList));
+      }
+    }
+  }, [notifications]);
+
   const handleMarkAllRead = async (e) => {
     e.stopPropagation();
     try {
@@ -59,6 +91,29 @@ export function Topbar({ title }) {
     } catch (err) {
       console.error('Failed to mark notification as read', err);
     }
+  };
+
+  const handleNotificationRedirect = (n) => {
+    handleNotificationClick(n._id);
+    const isAgent = auth?.roleKey === 'sales_person';
+    let targetPage = isAgent ? 'sp-dashboard' : 'dashboard';
+
+    if (n.type === 'lead_assigned') {
+      targetPage = isAgent ? 'sp-leads' : 'leads';
+    } else if (n.type === 'qd_submitted') {
+      targetPage = isAgent ? 'sp-leads' : 'qd';
+    } else if (n.type === 'qd_dispatched' || n.title?.toLowerCase().includes('approve')) {
+      targetPage = isAgent ? 'sp-leads' : 'qd';
+    } else if (n.title?.toLowerCase().includes('reject')) {
+      targetPage = isAgent ? 'sp-leads' : 'qd';
+    }
+
+    if (onPageChange) {
+      onPageChange(targetPage);
+    }
+    
+    setShowNotifications(false);
+    setActivePopup(null);
   };
 
   const getNotificationIconInfo = (type) => {
@@ -153,7 +208,7 @@ export function Topbar({ title }) {
                         return (
                           <div 
                             key={n._id} 
-                            onClick={() => handleNotificationClick(n._id)}
+                            onClick={() => handleNotificationRedirect(n)}
                             className={cn(
                               "p-4 border-b border-border-light dark:border-border-dark last:border-none flex gap-3 hover:bg-background-dark/5 dark:hover:bg-background/5 transition-colors cursor-pointer",
                               !n.read && "bg-accent/5 dark:bg-accent/5"
@@ -197,6 +252,73 @@ export function Topbar({ title }) {
           <Avatar name={auth?.name} src={auth?.user?.avatar} size="sm" />
         </div>
       </div>
+
+      {/* Premium Notification Popup Modal */}
+      <AnimatePresence>
+        {activePopup && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="w-full max-w-md bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-3xl p-6 shadow-2xl relative overflow-hidden"
+            >
+              <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-accent via-purple-500 to-indigo-500" />
+              
+              <div className="flex items-center gap-4 mb-4 mt-2">
+                <div className={cn(
+                  "w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-md",
+                  activePopup.type === 'qd_dispatched' || activePopup.title?.toLowerCase().includes('approve')
+                    ? "bg-success/15 text-success"
+                    : activePopup.title?.toLowerCase().includes('reject')
+                    ? "bg-danger/15 text-danger"
+                    : "bg-accent/15 text-accent"
+                )}>
+                  {activePopup.type === 'qd_dispatched' || activePopup.title?.toLowerCase().includes('approve') ? (
+                    <CheckCircle2 className="w-6 h-6" />
+                  ) : activePopup.title?.toLowerCase().includes('reject') ? (
+                    <AlertCircle className="w-6 h-6" />
+                  ) : (
+                    <UserCheck className="w-6 h-6" />
+                  )}
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-accent uppercase tracking-wider block mb-0.5">
+                    New Alert
+                  </span>
+                  <h3 className="text-base font-bold text-text-primary dark:text-text-dark-primary leading-tight">
+                    {activePopup.title}
+                  </h3>
+                </div>
+              </div>
+
+              <div className="p-4 bg-background-dark/5 dark:bg-background/5 rounded-2xl mb-6 border border-border-light/40 dark:border-border-dark/40">
+                <p className="text-sm text-text-secondary dark:text-text-dark-secondary leading-relaxed font-medium">
+                  {activePopup.message}
+                </p>
+              </div>
+
+              <div className="flex items-center justify-end gap-3">
+                <button
+                  onClick={() => {
+                    handleNotificationClick(activePopup._id);
+                    setActivePopup(null);
+                  }}
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-text-muted hover:bg-background-dark/5 dark:hover:bg-background/5 transition-colors"
+                >
+                  Dismiss
+                </button>
+                <button
+                  onClick={() => handleNotificationRedirect(activePopup)}
+                  className="px-5 py-2.5 bg-accent hover:bg-accent-light text-white text-xs font-bold rounded-xl shadow-md shadow-accent/20 hover:shadow-accent/30 transition-all flex items-center gap-1.5"
+                >
+                  View Details
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </header>
   );
 }

@@ -13,7 +13,7 @@ export function Layout({ activePage, onPageChange, title, children }) {
       <Sidebar activePage={activePage} onPageChange={onPageChange} />
       
       <div className="flex-1 ml-64 flex flex-col min-w-0">
-        <Topbar title={title} />
+        <Topbar title={title} onPageChange={onPageChange} />
         
         <main className="flex-1 p-8 overflow-x-hidden">
           {children}

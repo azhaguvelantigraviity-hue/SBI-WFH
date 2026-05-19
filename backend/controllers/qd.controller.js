@@ -79,6 +79,7 @@ exports.updateQD = async (req, res) => {
 
   if (status) {
     qd.status = status;
+    const Notification = require('../models/Notification');
     if (status === 'dispatched') {
       qd.dispatched_at = new Date();
       // Update lead status to dispatched
@@ -86,11 +87,25 @@ exports.updateQD = async (req, res) => {
         status: 'dispatched',
         $push: { status_history: { status: 'dispatched', changed_by: req.user._id } },
       });
+      // Notification for agent
+      await Notification.create({
+        user: qd.agent,
+        title: 'Application Approved',
+        message: `Application for customer ${qd.customer_name} has been approved.`,
+        type: 'qd_dispatched',
+      });
     } else if (status === 'rejected') {
       // Update lead status to rejected
       await Lead.findByIdAndUpdate(qd.lead, {
         status: 'rejected',
         $push: { status_history: { status: 'rejected', changed_by: req.user._id, note: rejection_reason || 'QD Rejected' } },
+      });
+      // Notification for agent
+      await Notification.create({
+        user: qd.agent,
+        title: 'Application Rejected',
+        message: `Application for customer ${qd.customer_name} has been rejected. Reason: ${rejection_reason || 'QD Rejected'}`,
+        type: 'system',
       });
     }
   }
