@@ -68,7 +68,9 @@ export function Topbar({ title, onPageChange }) {
         setActivePopup(target);
         
         const poppedList = JSON.parse(sessionStorage.getItem('popped_notifications') || '[]');
-        poppedList.push(target._id);
+        unreadAlerts.forEach(alert => {
+          if (!poppedList.includes(alert._id)) poppedList.push(alert._id);
+        });
         sessionStorage.setItem('popped_notifications', JSON.stringify(poppedList));
       }
     }
