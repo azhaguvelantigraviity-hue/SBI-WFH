@@ -16,7 +16,7 @@ const notificationSchema = new mongoose.Schema({
   },
   type: {
     type: String,
-    enum: ['lead_assigned', 'qd_submitted', 'qd_dispatched', 'system'],
+    enum: ['lead_assigned', 'qd_submitted', 'qd_dispatched', 'system', 'lead_request'],
     default: 'system',
   },
   read: {

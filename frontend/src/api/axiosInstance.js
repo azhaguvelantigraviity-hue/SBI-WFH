@@ -27,7 +27,7 @@ axiosInstance.interceptors.request.use(
 axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    if (error.response?.status === 401 && !error.config?.url?.includes('/auth/login')) {
       // Token expired or invalid — clear session and reload
       localStorage.removeItem('auth');
       window.location.href = '/'; // redirect to login

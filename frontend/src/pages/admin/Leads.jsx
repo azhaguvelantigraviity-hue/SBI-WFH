@@ -41,6 +41,21 @@ export function LeadsPage({ onNav }) {
   const { addToast } = useToast();
   const [editedLeads, setEditedLeads] = useState({});
   const [savingRow, setSavingRow] = useState(null);
+  const [requestingLeads, setRequestingLeads] = useState(false);
+
+  const handleRequestLeads = async () => {
+    setRequestingLeads(true);
+    try {
+      const res = await leadsApi.requestLeads();
+      if (res.success) {
+        addToast('success', 'Request Sent', 'Your request for more leads has been sent to the admin.');
+      }
+    } catch (err) {
+      addToast('error', 'Request Failed', 'Could not send lead request.');
+    } finally {
+      setRequestingLeads(false);
+    }
+  };
 
   const handleRowChange = (leadId, field, value) => {
     setEditedLeads(prev => ({
@@ -294,12 +309,18 @@ export function LeadsPage({ onNav }) {
       <SectionHeader
         title={isAgent ? "My Leads" : "Lead Management"}
         subtitle={isAgent ? `${total} leads assigned to you` : `${total} total leads across all agents`}
-        action={!isAgent && (
-          <div className="flex gap-3">
-            <Button variant="ghost" icon={Download} onClick={handleExportLeads}>Export CSV</Button>
-            <Button icon={Plus} onClick={() => setShowUploadModal(true)}>Upload Leads</Button>
-          </div>
-        )}
+        action={
+          !isAgent ? (
+            <div className="flex gap-3">
+              <Button variant="ghost" icon={Download} onClick={handleExportLeads}>Export CSV</Button>
+              <Button icon={Plus} onClick={() => setShowUploadModal(true)}>Upload Leads</Button>
+            </div>
+          ) : (
+            <Button variant="primary" icon={Plus} onClick={handleRequestLeads} loading={requestingLeads}>
+              Request More Leads
+            </Button>
+          )
+        }
       />
 
       <div className="flex overflow-x-auto pb-2 -mx-1 px-1">
@@ -420,8 +441,7 @@ export function LeadsPage({ onNav }) {
                 { 
                   key: 'lead_number', 
                   label: '#', 
-                  muted: true, 
-                  render: (v) => <span className="font-mono text-[11px] tracking-tight">{v}</span> 
+                  render: (v) => <span className="font-mono text-[11px] font-bold tracking-tight">{v}</span> 
                 },
                 { 
                   key: 'customer_name', 
@@ -436,8 +456,7 @@ export function LeadsPage({ onNav }) {
                 { 
                   key: 'mobile', 
                   label: 'Mobile', 
-                  muted: true, 
-                  render: (v) => <span className="font-mono text-xs">{v}</span> 
+                  render: (v) => <span className="font-mono text-sm font-bold">{v}</span> 
                 },
                 { 
                   key: 'pincode', 
@@ -480,7 +499,7 @@ export function LeadsPage({ onNav }) {
                   render: (v, r) => {
                     const isCompleted = r.status !== 'new' && r.status !== 'assigned';
                     const currentStatus = getRowValue(r, 'status');
-                    const hasNotes = currentStatus === 'Follow Up' || currentStatus === 'Exception';
+                    const hasNotes = currentStatus !== '';
                     return (
                       <div className="flex flex-col gap-1.5 min-w-[150px]">
                         <select
@@ -574,8 +593,7 @@ export function LeadsPage({ onNav }) {
                 { 
                   key: 'lead_number', 
                   label: '#', 
-                  muted: true, 
-                  render: (v) => <span className="font-mono text-[11px] tracking-tight">{v}</span> 
+                  render: (v) => <span className="font-mono text-[11px] font-bold tracking-tight">{v}</span> 
                 },
                 { 
                   key: 'customer_name', 
@@ -590,16 +608,14 @@ export function LeadsPage({ onNav }) {
                 { 
                   key: 'mobile', 
                   label: 'Mobile', 
-                  muted: true, 
-                  render: (v) => <span className="font-mono text-xs">{v}</span> 
+                  render: (v) => <span className="font-mono text-sm font-bold">{v}</span> 
                 },
                 { 
                   key: 'pincode', 
                   label: 'Pincode', 
-                  muted: true, 
-                  render: (v) => <span className="font-mono text-xs">{v}</span> 
+                  render: (v) => <span className="font-mono text-sm font-bold">{v}</span> 
                 },
-                { key: 'assigned_to', label: 'Agent', render: (v) => v?.name || '—', muted: true },
+                { key: 'assigned_to', label: 'Agent', render: (v) => <span className="font-bold">{v?.name || '—'}</span> },
                 { 
                   key: 'status', 
                   label: 'Status', 
@@ -616,8 +632,7 @@ export function LeadsPage({ onNav }) {
                 { 
                   key: 'updatedAt', 
                   label: 'Updated', 
-                  muted: true, 
-                  render: (v) => <span className="text-xs">{new Date(v).toLocaleDateString()}</span> 
+                  render: (v) => <span className="text-sm font-bold">{new Date(v).toLocaleDateString()}</span> 
                 },
                 { 
                   key: '_id', 

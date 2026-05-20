@@ -22,7 +22,7 @@ export function LoginPage() {
       setEmail('admin@sbi.com');
       setPassword('Admin@123');
     } else {
-      setEmail('arjun@sbi.com');
+      setEmail('azhagu@gmail.com');
       setPassword('Sales@123');
     }
   };

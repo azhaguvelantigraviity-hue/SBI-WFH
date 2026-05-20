@@ -99,11 +99,15 @@ export function AgentDashboard() {
                 { key: 'lead_number', label: 'Lead #', muted: true },
                 { key: 'customer_name', label: 'Customer', render: (v) => <span className="font-bold">{v}</span> },
                 { 
-                  key: 'call_status', 
+                  key: 'status', 
                   label: 'Status', 
-                  render: (v) => {
-                    const statusVal = v || 'pending';
-                    return <Badge label={statusVal.replace(/_/g, ' ')} color={statusVal} />;
+                  render: (_, r) => {
+                    if (r.status === 'dispatched' || r.status === 'closed') return <Badge label="Approved" color="success" />;
+                    if (r.status === 'rejected') return <Badge label="Rejected" color="danger" />;
+                    if (r.status === 'qd_submitted') return <Badge label="Pending" color="warning" />;
+                    
+                    const callStatus = r.call_status || 'pending';
+                    return <Badge label={callStatus.replace(/_/g, ' ')} color={callStatus} />;
                   }
                 },
                 { key: 'updatedAt', label: 'Last Action', render: (v) => new Date(v).toLocaleDateString(), muted: true },

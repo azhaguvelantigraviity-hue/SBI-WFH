@@ -9,6 +9,7 @@ const {
   deleteLead,
   bulkImport,
   bulkAssign,
+  requestLeads,
 } = require('../controllers/leads.controller');
 
 router.use(protect);
@@ -18,6 +19,7 @@ router.get('/:id', getLeadById);                                     // admin + 
 router.post('/', createLead);                                         // admin + sales
 router.post('/bulk-import', requireRole('admin'), bulkImport);       // admin only
 router.post('/bulk-assign', requireRole('admin'), bulkAssign);       // admin only
+router.post('/request', requireRole('sales_person'), requestLeads);  // sales only
 router.patch('/:id', updateLead);                                    // admin + sales
 router.delete('/:id', requireRole('admin'), deleteLead);             // admin only
 

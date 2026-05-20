@@ -290,3 +290,25 @@ exports.bulkAssign = async (req, res) => {
 
   res.json({ success: true, message: `Successfully assigned ${leadIds.length} leads.` });
 };
+
+// ─── @POST /api/leads/request ───────────────────────────────────────────────
+exports.requestLeads = async (req, res) => {
+  if (req.user.role !== 'sales_person') {
+    return res.status(403).json({ success: false, message: 'Only sales persons can request leads' });
+  }
+
+  // Find all active admins
+  const admins = await User.find({ role: 'admin', status: 'active' });
+
+  // Create notification for each admin
+  for (const admin of admins) {
+    await Notification.create({
+      user: admin._id,
+      title: 'Lead Request',
+      message: `Sales person ${req.user.name} has completed their tasks and is requesting more leads.`,
+      type: 'lead_request',
+    });
+  }
+
+  res.json({ success: true, message: 'Request sent to admin successfully' });
+};

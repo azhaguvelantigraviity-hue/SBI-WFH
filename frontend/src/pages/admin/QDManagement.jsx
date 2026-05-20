@@ -200,23 +200,23 @@ export function QDManagementPage() {
                 label: 'Actions', 
                 render: (_, r) => (
                   <div className="flex items-center gap-2">
+                    {(r.status === 'pending' || r.status === 'rejected') && (
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); handleAction(r._id, 'dispatch'); }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-success/10 text-success hover:bg-success/20 transition-colors text-[11px] font-bold"
+                      >
+                        <CheckCircle2 className="w-3 h-3" />
+                        Approve
+                      </button>
+                    )}
                     {r.status === 'pending' && (
-                      <>
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); handleAction(r._id, 'dispatch'); }}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-success/10 text-success hover:bg-success/20 transition-colors text-[11px] font-bold"
-                        >
-                          <CheckCircle2 className="w-3 h-3" />
-                          Approve
-                        </button>
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); handleAction(r._id, 'reject'); }}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-danger/10 text-danger hover:bg-danger/20 transition-colors text-[11px] font-bold"
-                        >
-                          <XCircle className="w-3 h-3" />
-                          Reject
-                        </button>
-                      </>
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); handleAction(r._id, 'reject'); }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-danger/10 text-danger hover:bg-danger/20 transition-colors text-[11px] font-bold"
+                      >
+                        <XCircle className="w-3 h-3" />
+                        Reject
+                      </button>
                     )}
                     <button 
                       onClick={(e) => { e.stopPropagation(); setSelectedQD(r); }}
@@ -292,10 +292,10 @@ export function QDManagementPage() {
             <div className="px-6 py-4 border-t border-border-light dark:border-border-dark flex justify-end gap-3 bg-background-dark/5 dark:bg-background/5">
               <button onClick={() => setSelectedQD(null)} className="px-6 py-2.5 rounded-xl text-sm font-bold text-text-muted hover:bg-background-dark/10 transition-all">Close</button>
               {selectedQD.status === 'pending' && (
-                <>
-                  <button onClick={() => handleAction(selectedQD._id, 'reject')} className="px-6 py-2.5 rounded-xl text-sm font-bold bg-danger/10 text-danger hover:bg-danger/20 transition-all">Reject Submission</button>
-                  <button onClick={() => handleAction(selectedQD._id, 'dispatch')} className="px-6 py-2.5 rounded-xl text-sm font-bold bg-success text-white shadow-lg shadow-success/20 hover:scale-[1.02] transition-all">Dispatch / Approve</button>
-                </>
+                <button onClick={() => handleAction(selectedQD._id, 'reject')} className="px-6 py-2.5 rounded-xl text-sm font-bold bg-danger/10 text-danger hover:bg-danger/20 transition-all">Reject Submission</button>
+              )}
+              {(selectedQD.status === 'pending' || selectedQD.status === 'rejected') && (
+                <button onClick={() => handleAction(selectedQD._id, 'dispatch')} className="px-6 py-2.5 rounded-xl text-sm font-bold bg-success text-white shadow-lg shadow-success/20 hover:scale-[1.02] transition-all">Dispatch / Approve</button>
               )}
             </div>
           </div>
