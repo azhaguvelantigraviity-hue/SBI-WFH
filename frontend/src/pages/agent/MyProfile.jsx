@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { SectionHeader } from '../../components/ui/SectionHeader';
 import { Card } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
@@ -86,7 +85,6 @@ export function MyProfilePage() {
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-6xl mx-auto">
-      <SectionHeader title="My Profile" />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
