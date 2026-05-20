@@ -42,6 +42,9 @@ export function LeadsPage({ onNav }) {
   const [editedLeads, setEditedLeads] = useState({});
   const [savingRow, setSavingRow] = useState(null);
   const [requestingLeads, setRequestingLeads] = useState(false);
+  const [showAddLeadModal, setShowAddLeadModal] = useState(false);
+  const [addLeadForm, setAddLeadForm] = useState({ customer_name: '', mobile: '', pincode: '', state: '', district: '' });
+  const [savingLead, setSavingLead] = useState(false);
 
   const handleRequestLeads = async () => {
     setRequestingLeads(true);
@@ -54,6 +57,30 @@ export function LeadsPage({ onNav }) {
       addToast('error', 'Request Failed', 'Could not send lead request.');
     } finally {
       setRequestingLeads(false);
+    }
+  };
+
+  const handleAddLeadSubmit = async (e) => {
+    e.preventDefault();
+    if (addLeadForm.mobile.replace(/\D/g, '').length !== 10) {
+      addToast('warning', 'Validation', 'Mobile number must be exactly 10 digits.');
+      return;
+    }
+    setSavingLead(true);
+    try {
+      const res = await leadsApi.createLead(addLeadForm);
+      if (res.success) {
+        addToast('success', 'Lead Added', `Lead ${res.data.lead_number} created successfully.`);
+        setShowAddLeadModal(false);
+        setAddLeadForm({ customer_name: '', mobile: '', pincode: '', state: '', district: '' });
+        fetchLeads();
+      }
+    } catch (err) {
+      console.error('Create lead error:', err.response?.status, err.response?.data || err.message);
+      const msg = err.response?.data?.message || err.response?.data?.error || err.message || 'Failed to create lead.';
+      addToast('error', 'Error', msg);
+    } finally {
+      setSavingLead(false);
     }
   };
 
@@ -312,6 +339,7 @@ export function LeadsPage({ onNav }) {
         action={
           !isAgent ? (
             <div className="flex gap-3">
+              <Button variant="ghost" icon={Plus} onClick={() => setShowAddLeadModal(true)}>Add Lead</Button>
               <Button variant="ghost" icon={Download} onClick={handleExportLeads}>Export CSV</Button>
               <Button icon={Plus} onClick={() => setShowUploadModal(true)}>Upload Leads</Button>
             </div>
@@ -822,6 +850,87 @@ export function LeadsPage({ onNav }) {
           </div>
         </div>
       </Modal>
+
+      {/* Add Lead Modal */}
+      {showAddLeadModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background-dark/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-card-dark border border-border-light dark:border-border-dark rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between p-6 border-b border-border-light dark:border-border-dark">
+              <h3 className="text-xl font-bold font-fraunces">Add New Lead</h3>
+              <button onClick={() => setShowAddLeadModal(false)} className="text-text-muted hover:text-text-primary transition-colors">
+                <span className="text-xl leading-none">✕</span>
+              </button>
+            </div>
+
+            <form onSubmit={handleAddLeadSubmit} className="p-6 space-y-4" autoComplete="off">
+              <div className="space-y-1.5">
+                <label className="block text-[11px] font-bold text-text-muted uppercase tracking-wider mb-1.5 ml-1">Customer Name <span className="text-danger">*</span></label>
+                <input
+                  autoComplete="new-password"
+                  className="w-full bg-background-dark/5 dark:bg-background/5 border border-border-light dark:border-border-dark rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent"
+                  placeholder="e.g. Ramesh Kumar"
+                  value={addLeadForm.customer_name}
+                  onChange={e => setAddLeadForm({...addLeadForm, customer_name: e.target.value})}
+                  required
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-[11px] font-bold text-text-muted uppercase tracking-wider mb-1.5 ml-1">Mobile Number <span className="text-danger">*</span></label>
+                <input
+                  autoComplete="new-password"
+                  className="w-full bg-background-dark/5 dark:bg-background/5 border border-border-light dark:border-border-dark rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent"
+                  placeholder="10-digit mobile"
+                  maxLength={10}
+                  value={addLeadForm.mobile}
+                  onChange={e => setAddLeadForm({...addLeadForm, mobile: e.target.value.replace(/\D/g, '').slice(0, 10)})}
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="block text-[11px] font-bold text-text-muted uppercase tracking-wider mb-1.5 ml-1">Pincode <span className="text-danger">*</span></label>
+                  <input
+                    autoComplete="new-password"
+                    className="w-full bg-background-dark/5 dark:bg-background/5 border border-border-light dark:border-border-dark rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent"
+                    placeholder="e.g. 600001"
+                    maxLength={6}
+                    value={addLeadForm.pincode}
+                    onChange={e => setAddLeadForm({...addLeadForm, pincode: e.target.value.replace(/\D/g, '').slice(0, 6)})}
+                    required
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="block text-[11px] font-bold text-text-muted uppercase tracking-wider mb-1.5 ml-1">State</label>
+                  <input
+                    autoComplete="new-password"
+                    className="w-full bg-background-dark/5 dark:bg-background/5 border border-border-light dark:border-border-dark rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent"
+                    placeholder="e.g. Tamil Nadu"
+                    value={addLeadForm.state}
+                    onChange={e => setAddLeadForm({...addLeadForm, state: e.target.value})}
+                  />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-[11px] font-bold text-text-muted uppercase tracking-wider mb-1.5 ml-1">District</label>
+                <input
+                  autoComplete="new-password"
+                  className="w-full bg-background-dark/5 dark:bg-background/5 border border-border-light dark:border-border-dark rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent"
+                  placeholder="e.g. Chennai"
+                  value={addLeadForm.district}
+                  onChange={e => setAddLeadForm({...addLeadForm, district: e.target.value})}
+                />
+              </div>
+
+              <div className="pt-4 flex gap-3">
+                <Button type="button" variant="ghost" className="flex-1" onClick={() => setShowAddLeadModal(false)}>Cancel</Button>
+                <Button type="submit" disabled={savingLead} className="flex-1">
+                  {savingLead ? 'Creating...' : 'Create Lead'}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

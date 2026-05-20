@@ -325,7 +325,7 @@ export function SalesPersonsPage() {
       {/* Add User Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background-dark/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-card-dark border border-border-light dark:border-border-dark rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+          <div className="bg-white dark:bg-card-dark border border-border-light dark:border-border-dark rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl animate-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between p-6 border-b border-border-light dark:border-border-dark">
               <h3 className="text-xl font-bold font-fraunces">{editId ? 'Edit Staff' : 'Add New Staff'}</h3>
               <button onClick={() => setShowModal(false)} className="text-text-muted hover:text-text-primary transition-colors">
@@ -333,10 +333,11 @@ export function SalesPersonsPage() {
               </button>
             </div>
             
-            <form onSubmit={handleAddSubmit} className="p-6 space-y-4">
+            <form onSubmit={handleAddSubmit} className="p-6 space-y-4" autoComplete="off">
               <Input 
                 label="Full Name" 
                 placeholder="e.g. Rahul Sharma"
+                autoComplete="new-password"
                 value={form.name} 
                 onChange={e => setForm({...form, name: e.target.value})} 
                 required 
@@ -344,6 +345,7 @@ export function SalesPersonsPage() {
               <Input 
                 label="Employee ID" 
                 placeholder="e.g. EMP005"
+                autoComplete="new-password"
                 value={form.employee_id} 
                 onChange={e => setForm({...form, employee_id: e.target.value})} 
                 required 
@@ -352,6 +354,7 @@ export function SalesPersonsPage() {
                 label="Email Address" 
                 type="email"
                 placeholder="e.g. rahul@sbi.com"
+                autoComplete="new-password"
                 value={form.email} 
                 onChange={e => setForm({...form, email: e.target.value})} 
                 required 
@@ -359,14 +362,20 @@ export function SalesPersonsPage() {
               <Input 
                 label="Mobile Number" 
                 placeholder="10-digit mobile"
+                maxLength={10}
+                autoComplete="new-password"
                 value={form.mobile} 
-                onChange={e => setForm({...form, mobile: e.target.value})} 
+                onChange={e => {
+                  const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                  setForm({...form, mobile: val});
+                }} 
                 required 
               />
               <Input 
                 label="Password" 
                 type="password"
                 placeholder={editId ? "Leave blank to keep current" : "Initial password"}
+                autoComplete="new-password"
                 value={form.password} 
                 onChange={e => setForm({...form, password: e.target.value})} 
                 required={!editId} 

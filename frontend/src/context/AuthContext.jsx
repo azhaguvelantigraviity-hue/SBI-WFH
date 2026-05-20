@@ -28,10 +28,10 @@ export function AuthProvider({ children }) {
     verifyToken();
   }, []);
 
-  const login = useCallback(async (email, password) => {
+  const login = useCallback(async (email, password, role) => {
     setLoading(true);
     try {
-      const res = await authApi.login(email, password);
+      const res = await authApi.login(email, password, role);
       if (res.success) {
         const authData = { 
           token: res.token, 

@@ -24,11 +24,15 @@ exports.login = async (req, res) => {
     return res.status(400).json({ success: false, message, errors: errors.array() });
   }
 
-  const { email, password } = req.body;
+  const { email, password, role } = req.body;
 
   const user = await User.findOne({ email }).select('+password');
   if (!user) {
     return res.status(401).json({ success: false, message: 'Invalid email or password' });
+  }
+
+  if (role && user.role !== role) {
+    return res.status(401).json({ success: false, message: `Access denied. Account is not registered as a ${role === 'admin' ? 'Administrator' : 'Sales Person'}.` });
   }
 
   const isMatch = await user.comparePassword(password);
