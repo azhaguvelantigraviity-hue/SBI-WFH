@@ -10,7 +10,8 @@ import {
   CheckCircle2,
   AlertCircle,
   Clock,
-  UserCheck
+  UserCheck,
+  UserPlus
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -49,13 +50,15 @@ export function Topbar({ title, onPageChange }) {
       const unreadAlerts = notifications.filter(n => {
         if (n.read) return false;
         
-        const isTargetType = n.type === 'lead_assigned' || n.type === 'qd_dispatched' || n.type === 'qd_submitted' || n.type === 'system';
+        const isTargetType = n.type === 'lead_assigned' || n.type === 'qd_dispatched' || n.type === 'qd_submitted' || n.type === 'system' || n.type === 'lead_request';
         const hasKeyword = n.title?.toLowerCase().includes('approve') || 
                             n.title?.toLowerCase().includes('reject') || 
                             n.title?.toLowerCase().includes('assign') ||
+                            n.title?.toLowerCase().includes('request') ||
                             n.message?.toLowerCase().includes('approve') ||
                             n.message?.toLowerCase().includes('reject') ||
-                            n.message?.toLowerCase().includes('assign');
+                            n.message?.toLowerCase().includes('assign') ||
+                            n.message?.toLowerCase().includes('request');
                             
         if (!isTargetType && !hasKeyword) return false;
 
@@ -102,6 +105,8 @@ export function Topbar({ title, onPageChange }) {
 
     if (n.type === 'lead_assigned') {
       targetPage = isAgent ? 'sp-leads' : 'leads';
+    } else if (n.type === 'lead_request') {
+      targetPage = 'assign'; // Admins go to Assign Leads
     } else if (n.type === 'qd_submitted') {
       targetPage = isAgent ? 'sp-leads' : 'qd';
     } else if (n.type === 'qd_dispatched' || n.title?.toLowerCase().includes('approve')) {
@@ -122,6 +127,8 @@ export function Topbar({ title, onPageChange }) {
     switch (type) {
       case 'lead_assigned':
         return { icon: UserCheck, color: 'text-accent bg-accent/10' };
+      case 'lead_request':
+        return { icon: UserPlus, color: 'text-warning bg-warning/10' };
       case 'qd_submitted':
         return { icon: Clock, color: 'text-warning bg-warning/10' };
       case 'qd_dispatched':
@@ -272,12 +279,16 @@ export function Topbar({ title, onPageChange }) {
                   "w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-md",
                   activePopup.type === 'qd_dispatched' || activePopup.title?.toLowerCase().includes('approve')
                     ? "bg-success/15 text-success"
+                    : activePopup.type === 'lead_request' || activePopup.title?.toLowerCase().includes('request')
+                    ? "bg-warning/15 text-warning"
                     : activePopup.title?.toLowerCase().includes('reject')
                     ? "bg-danger/15 text-danger"
                     : "bg-accent/15 text-accent"
                 )}>
                   {activePopup.type === 'qd_dispatched' || activePopup.title?.toLowerCase().includes('approve') ? (
                     <CheckCircle2 className="w-6 h-6" />
+                  ) : activePopup.type === 'lead_request' || activePopup.title?.toLowerCase().includes('request') ? (
+                    <UserPlus className="w-6 h-6" />
                   ) : activePopup.title?.toLowerCase().includes('reject') ? (
                     <AlertCircle className="w-6 h-6" />
                   ) : (
