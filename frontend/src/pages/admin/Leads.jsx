@@ -54,7 +54,8 @@ export function LeadsPage({ onNav }) {
         addToast('success', 'Request Sent', 'Your request for more leads has been sent to the admin.');
       }
     } catch (err) {
-      addToast('error', 'Request Failed', 'Could not send lead request.');
+      const msg = err.response?.data?.message || err.response?.data?.error || err.message || 'Could not send lead request.';
+      addToast('error', 'Request Failed', msg);
     } finally {
       setRequestingLeads(false);
     }

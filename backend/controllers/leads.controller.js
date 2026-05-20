@@ -300,6 +300,17 @@ exports.requestLeads = async (req, res) => {
   // Find all active admins
   const admins = await User.find({ role: 'admin', status: 'active' });
 
+  // Prevent duplicate unread notifications from the same salesman
+  const existingNotification = await Notification.findOne({
+    type: 'lead_request',
+    message: { $regex: req.user.name, $options: 'i' },
+    read: false
+  });
+
+  if (existingNotification) {
+    return res.status(400).json({ success: false, message: 'You already have an active lead request pending admin review.' });
+  }
+
   // Create notification for each admin
   for (const admin of admins) {
     await Notification.create({
