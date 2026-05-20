@@ -13,18 +13,13 @@ export function LoginPage() {
   const { theme, toggleTheme } = useTheme();
   const { addToast } = useToast();
   const [role, setRole] = useState('admin');
-  const [email, setEmail] = useState('admin@sbi.com');
-  const [password, setPassword] = useState('Admin@123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
 
   const handleRoleChange = (newRole) => {
     setRole(newRole);
-    if (newRole === 'admin') {
-      setEmail('admin@sbi.com');
-      setPassword('Admin@123');
-    } else {
-      setEmail('azhagu@gmail.com');
-      setPassword('Sales@123');
-    }
+    setEmail('');
+    setPassword('');
   };
 
   const handleSubmit = async (e) => {
