@@ -4,6 +4,7 @@ import { Card } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import { useToast } from '../../context/ToastContext';
 import { usersApi } from '../../api/usersApi';
 import { User, Lock, Bell, Shield, Moon, Sun } from 'lucide-react';
@@ -11,6 +12,7 @@ import { cn } from '../../utils/cn';
 
 export function SettingsPage() {
   const { auth, setAuth } = useAuth();
+  const { theme, setTheme } = useTheme();
   const { addToast } = useToast();
   
   const [activeTab, setActiveTab] = useState('profile');
@@ -23,8 +25,19 @@ export function SettingsPage() {
     new_password: '',
     confirm_password: '',
   });
+  const [compactView, setCompactView] = useState(() => {
+    return localStorage.getItem('compactView') === 'true';
+  });
 
   const [saving, setSaving] = useState(false);
+
+  const handleCompactToggle = () => {
+    const newVal = !compactView;
+    setCompactView(newVal);
+    localStorage.setItem('compactView', String(newVal));
+    document.documentElement.classList.toggle('compact', newVal);
+    addToast('success', 'Preference Saved', `Compact view ${newVal ? 'enabled' : 'disabled'}.`);
+  };
 
   const handleProfileUpdate = async (e) => {
     e.preventDefault();
@@ -169,8 +182,28 @@ export function SettingsPage() {
                     <p className="text-xs text-text-muted mt-1">Toggle between light and dark mode</p>
                   </div>
                   <div className="flex bg-background-dark/5 dark:bg-background/5 rounded-lg p-1">
-                    <button className="px-4 py-2 rounded text-xs font-bold bg-white dark:bg-card-dark shadow-sm">Light</button>
-                    <button className="px-4 py-2 rounded text-xs font-bold text-text-muted hover:text-text-primary">Dark</button>
+                    <button 
+                      onClick={() => { setTheme('light'); addToast('success', 'Theme Changed', 'Switched to light mode.'); }}
+                      className={cn(
+                        "px-4 py-2 rounded text-xs font-bold transition-all",
+                        theme === 'light' 
+                          ? "bg-white dark:bg-card-dark shadow-sm text-accent" 
+                          : "text-text-muted hover:text-text-primary"
+                      )}
+                    >
+                      Light
+                    </button>
+                    <button 
+                      onClick={() => { setTheme('dark'); addToast('success', 'Theme Changed', 'Switched to dark mode.'); }}
+                      className={cn(
+                        "px-4 py-2 rounded text-xs font-bold transition-all",
+                        theme === 'dark' 
+                          ? "bg-white dark:bg-card-dark shadow-sm text-accent" 
+                          : "text-text-muted hover:text-text-primary"
+                      )}
+                    >
+                      Dark
+                    </button>
                   </div>
                 </div>
 
@@ -180,7 +213,12 @@ export function SettingsPage() {
                     <p className="text-xs text-text-muted mt-1">Reduce spacing in tables and lists</p>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" className="sr-only peer" />
+                    <input 
+                      type="checkbox" 
+                      className="sr-only peer" 
+                      checked={compactView} 
+                      onChange={handleCompactToggle} 
+                    />
                     <div className="w-11 h-6 bg-background-dark/20 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent"></div>
                   </label>
                 </div>

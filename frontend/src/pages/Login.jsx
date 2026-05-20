@@ -24,7 +24,8 @@ export function LoginPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const res = await login(email, password, role);
+    const dbRole = role === 'sales' ? 'sales_person' : role;
+    const res = await login(email, password, dbRole);
     if (res.success) {
       addToast('success', 'Welcome back!', `Successfully signed in.`);
     } else {
