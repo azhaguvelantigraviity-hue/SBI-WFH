@@ -28,8 +28,26 @@ export function SettingsPage() {
   const [compactView, setCompactView] = useState(() => {
     return localStorage.getItem('compactView') === 'true';
   });
+  
+  const [notificationPrefs, setNotificationPrefs] = useState(() => {
+    const saved = localStorage.getItem('notificationPrefs');
+    return saved ? JSON.parse(saved) : {
+      email_new_leads: true,
+      daily_summary: true,
+      system_updates: false,
+      status_changes: false
+    };
+  });
 
   const [saving, setSaving] = useState(false);
+
+  const handleNotificationToggle = (key, label) => {
+    const newVal = !notificationPrefs[key];
+    const newPrefs = { ...notificationPrefs, [key]: newVal };
+    setNotificationPrefs(newPrefs);
+    localStorage.setItem('notificationPrefs', JSON.stringify(newPrefs));
+    addToast('success', 'Preference Saved', `${label} turned ${newVal ? 'on' : 'off'}.`);
+  };
 
   const handleCompactToggle = () => {
     const newVal = !compactView;
@@ -229,11 +247,21 @@ export function SettingsPage() {
           {activeTab === 'notifications' && (
             <Card title="Notification Preferences" className="max-w-2xl">
               <div className="mt-4 space-y-4">
-                {['Email alerts for new leads', 'Daily summary reports', 'System maintenance updates', 'Lead status changes'].map((label, i) => (
-                  <div key={i} className="flex items-center justify-between p-4 rounded-xl border border-border-light dark:border-border-dark">
-                    <span className="font-bold text-sm">{label}</span>
+                {[
+                  { key: 'email_new_leads', label: 'Email alerts for new leads' },
+                  { key: 'daily_summary', label: 'Daily summary reports' },
+                  { key: 'system_updates', label: 'System maintenance updates' },
+                  { key: 'status_changes', label: 'Lead status changes' }
+                ].map((item, i) => (
+                  <div key={item.key} className="flex items-center justify-between p-4 rounded-xl border border-border-light dark:border-border-dark">
+                    <span className="font-bold text-sm">{item.label}</span>
                     <label className="relative inline-flex items-center cursor-pointer">
-                      <input type="checkbox" className="sr-only peer" defaultChecked={i < 2} />
+                      <input 
+                        type="checkbox" 
+                        className="sr-only peer" 
+                        checked={notificationPrefs[item.key]} 
+                        onChange={() => handleNotificationToggle(item.key, item.label)} 
+                      />
                       <div className="w-11 h-6 bg-background-dark/20 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent"></div>
                     </label>
                   </div>
