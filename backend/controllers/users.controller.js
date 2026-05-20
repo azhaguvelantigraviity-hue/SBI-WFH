@@ -52,13 +52,20 @@ exports.getUserById = async (req, res) => {
 
 // ─── @PATCH /api/users/:id ───────────────────────────────────────────────────
 exports.updateUser = async (req, res) => {
+  if (req.user.role !== 'admin' && req.user._id.toString() !== req.params.id) {
+    return res.status(403).json({ success: false, message: 'Not authorized to update this profile' });
+  }
+
   const user = await User.findById(req.params.id).select('+password');
   
   if (!user) {
     return res.status(404).json({ success: false, message: 'User not found' });
   }
 
-  const allowedFields = ['name', 'mobile', 'status', 'avatar', 'employee_id', 'email', 'role', 'password'];
+  let allowedFields = ['name', 'mobile', 'status', 'avatar', 'employee_id', 'email', 'role', 'password'];
+  if (req.user.role !== 'admin') {
+    allowedFields = ['name', 'mobile', 'avatar', 'password'];
+  }
   
   allowedFields.forEach(f => {
     if (req.body[f] !== undefined) {

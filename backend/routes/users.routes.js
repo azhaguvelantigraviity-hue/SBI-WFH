@@ -12,7 +12,7 @@ router.use(protect);
 
 router.get('/', requireRole('admin'), getUsers);
 router.get('/:id', requireRole('admin'), getUserById);
-router.patch('/:id', requireRole('admin'), updateUser);
+router.patch('/:id', updateUser);
 router.delete('/:id', requireRole('admin'), deleteUser);
 
 module.exports = router;
