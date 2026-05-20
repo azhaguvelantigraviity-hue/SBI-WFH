@@ -24,8 +24,7 @@ export function LoginPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const dbRole = role === 'sales' ? 'sales_person' : role;
-    const res = await login(email, password, dbRole);
+    const res = await login(email, password, role);
     if (res.success) {
       addToast('success', 'Welcome back!', `Successfully signed in.`);
     } else {
@@ -84,10 +83,10 @@ export function LoginPage() {
             Admin
           </button>
           <button
-            onClick={() => handleRoleChange('sales')}
+            onClick={() => handleRoleChange('sales_person')}
             className={cn(
               "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all duration-200",
-              role === 'sales' 
+              role === 'sales_person' 
                 ? "bg-white dark:bg-card-dark text-accent shadow-sm ring-1 ring-border-light/50 dark:ring-border-dark/50" 
                 : "text-text-muted hover:text-text-secondary"
             )}
