@@ -26,6 +26,7 @@ export function Input({
       <div className={cn(isPassword && "relative")}>
         <input
           type={isPassword ? (showPassword ? 'text' : 'password') : type}
+          required={required}
           className={cn(
             "w-full bg-background-dark/5 dark:bg-background/5 border border-border-light dark:border-border-dark rounded-lg px-3 py-2 text-sm transition-all focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent",
             isPassword && "pr-10",

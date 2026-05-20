@@ -50,10 +50,11 @@ function ToastItem({ type, title, msg, onRemove }) {
 
   return (
     <motion.div
+      role="alert"
       initial={{ opacity: 0, x: 20, scale: 0.95 }}
       animate={{ opacity: 1, x: 0, scale: 1 }}
       exit={{ opacity: 0, x: 20, scale: 0.95 }}
-      className="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl p-4 shadow-premium dark:shadow-premium-dark flex gap-3 min-w-[300px] max-w-[400px]"
+      className={`bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl p-4 shadow-premium dark:shadow-premium-dark flex gap-3 min-w-[300px] max-w-[400px] ${type === 'error' ? 'toast-error alert' : ''}`}
     >
       <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${colors[type]}`}>
         {icons[type]}

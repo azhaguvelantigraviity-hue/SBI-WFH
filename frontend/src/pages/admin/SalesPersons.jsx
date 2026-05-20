@@ -76,6 +76,19 @@ export function SalesPersonsPage() {
     }
   };
 
+  const handleDeleteUser = async (id, name) => {
+    if (!window.confirm(`Are you sure you want to delete sales person ${name}?`)) return;
+    try {
+      const res = await usersApi.deleteUser(id);
+      if (res.success) {
+        addToast('success', 'User Deleted', `Sales person ${name} deleted successfully.`);
+        fetchUsers();
+      }
+    } catch (err) {
+      addToast('error', 'Delete Failed', 'Could not delete sales person.');
+    }
+  };
+
   const handleAddSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
@@ -312,6 +325,14 @@ export function SalesPersonsPage() {
                       onClick={() => handleStatusChange(r._id || r.id, r.status)}
                     >
                       {r.status === 'active' ? 'Suspend' : 'Activate'}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-danger hover:text-danger delete"
+                      onClick={() => handleDeleteUser(r._id || r.id, r.name)}
+                    >
+                      Delete
                     </Button>
                   </div>
                 ) 
