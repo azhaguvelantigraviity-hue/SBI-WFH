@@ -27,22 +27,50 @@ export function QDManagementPage() {
   const [selectedQD, setSelectedQD] = useState(null);
   const [downloadingDoc, setDownloadingDoc] = useState(null); // tracks 'qdId-docIndex'
 
-  // Authenticated download — fetches as blob with JWT, forces save with original filename
+  // Download handler — handles both direct stream and static fallback
   const handleDownload = async (qdId, docIndex, originalname) => {
     const key = `${qdId}-${docIndex}`;
     setDownloadingDoc(key);
     try {
+      // Fetch as arraybuffer so we can inspect the content-type
       const response = await api.get(`/qd/${qdId}/docs/${docIndex}/download`, {
-        responseType: 'blob',
+        responseType: 'arraybuffer',
       });
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', originalname);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
+
+      const contentType = response.headers['content-type'] || '';
+
+      if (contentType.includes('application/json')) {
+        // Backend returned JSON fallback — file not on its disk
+        const text = new TextDecoder().decode(response.data);
+        const json = JSON.parse(text);
+        if (json.fallback && json.staticUrl) {
+          // Open the /uploads static URL directly in a new tab
+          const baseUrl = import.meta.env.VITE_API_URL
+            ? import.meta.env.VITE_API_URL.replace('/api', '')
+            : '';
+          const link = document.createElement('a');
+          link.href = `${baseUrl}${json.staticUrl}`;
+          link.setAttribute('download', json.originalname || originalname);
+          link.target = '_blank';
+          link.rel = 'noopener noreferrer';
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+        } else {
+          addToast('error', 'Download Failed', json.message || 'File not available.');
+        }
+      } else {
+        // Binary file — create blob and trigger download
+        const blob = new Blob([response.data], { type: contentType });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', originalname);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+      }
     } catch (err) {
       addToast('error', 'Download Failed', 'Could not download the document.');
     } finally {

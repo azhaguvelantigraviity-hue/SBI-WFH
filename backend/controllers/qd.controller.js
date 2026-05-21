@@ -155,10 +155,17 @@ exports.downloadDoc = async (req, res) => {
   const filePath = path.join(__dirname, '..', 'uploads', doc.filename);
 
   if (!fs.existsSync(filePath)) {
-    return res.status(404).json({ success: false, message: 'File not found on server' });
+    // File not on this server instance — send doc metadata so frontend
+    // can fall back to opening the /uploads static URL directly
+    return res.status(200).json({
+      success: false,
+      fallback: true,
+      staticUrl: doc.path,           // e.g. /uploads/1779343527784-Agent_ID_Card.pdf
+      originalname: doc.originalname,
+    });
   }
 
-  // Force browser to download with the original filename
+  // File exists on disk — stream it with correct Content-Disposition header
   res.download(filePath, doc.originalname, (err) => {
     if (err && !res.headersSent) {
       res.status(500).json({ success: false, message: 'Download failed' });
