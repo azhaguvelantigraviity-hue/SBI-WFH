@@ -13,22 +13,41 @@ const SALES_NEW = { name: 'Test Salesperson', email: `sales_auto_${Date.now()}@s
 async function loginAs(page, creds) {
   await page.goto(`${BASE_URL}/`);
   await page.waitForLoadState('networkidle');
-  // Try common selectors for email / username field
+
+  // IMPORTANT: Click role button FIRST — Login.jsx clears email/password on role change!
+  if (creds.email.includes('sales') || creds.email.includes('arjun') || creds.email.includes('priya')) {
+    const salesRoleSel = 'button:has-text("Sales Person")';
+    try {
+      await page.locator(salesRoleSel).first().waitFor({ state: 'visible', timeout: 4000 });
+      await page.locator(salesRoleSel).first().click();
+      await page.waitForTimeout(500); // let the form clear and re-render
+    } catch (e) {
+      // Ignore if not found
+    }
+  }
+
+  // Now fill credentials AFTER role is selected
   const emailSel = 'input[type="email"], input[name="email"], input[placeholder*="email" i], input[placeholder*="username" i]';
   const passSel  = 'input[type="password"]';
-  const btnSel   = 'button[type="submit"], button:has-text("Login"), button:has-text("Sign in"), button:has-text("Log in")';
+  const btnSel   = 'button[type="submit"], button:has-text("Login"), button:has-text("Sign in"), button:has-text("Log in"), button:has-text("Sign In")';
   await page.locator(emailSel).first().fill(creds.email);
   await page.locator(passSel).first().fill(creds.password);
+
   await page.locator(btnSel).first().click();
+  // Wait for loading to finish, Render might take time to wake up
+  await page.waitForTimeout(3000);
   await page.waitForLoadState('networkidle');
 }
 
 async function logout(page) {
-  const logoutSel = 'button:has-text("Logout"), a:has-text("Logout"), button:has-text("Sign out"), a:has-text("Sign out")';
+  const logoutSel = 'button:has-text("Logout"), a:has-text("Logout"), button:has-text("Sign out"), a:has-text("Sign out"), [title="Logout"]';
   const btn = page.locator(logoutSel).first();
-  if (await btn.isVisible({ timeout: 3000 }).catch(() => false)) {
+  try {
+    await btn.waitFor({ state: 'visible', timeout: 5000 });
     await btn.click();
     await page.waitForLoadState('networkidle');
+  } catch (e) {
+    console.warn('Logout button not found');
   }
 }
 
@@ -132,10 +151,15 @@ test.describe('2. Authentication', () => {
     await page.locator(emailSel).first().fill(ADMIN.email);
     await page.locator('input[type="password"]').first().fill('WrongPassword999!');
     await page.locator('button[type="submit"], button:has-text("Login"), button:has-text("Sign")').first().click();
-    await page.waitForTimeout(2000);
     // Should show some error
     const errorSel = '[class*="error"], [class*="alert"], [role="alert"], p:has-text("invalid"), p:has-text("incorrect"), p:has-text("wrong"), span:has-text("error")';
-    const errorVisible = await page.locator(errorSel).first().isVisible({ timeout: 5000 }).catch(() => false);
+    let errorVisible = false;
+    try {
+      await page.locator(errorSel).first().waitFor({ state: 'visible', timeout: 15000 });
+      errorVisible = true;
+    } catch (e) {
+      errorVisible = false;
+    }
     expect(errorVisible, 'No error message shown for wrong password').toBeTruthy();
   });
 
@@ -236,7 +260,13 @@ test.describe('3. Admin Panel', () => {
     await loginAs(page, ADMIN);
     await page.waitForTimeout(2000);
     // Should have some admin UI
-    const adminUI = await page.locator('nav, [class*="sidebar"], [class*="dashboard"], [class*="admin"]').first().isVisible({ timeout: 8000 }).catch(() => false);
+    let adminUI = false;
+    try {
+      await page.locator('nav, [class*="sidebar"], [class*="dashboard"], [class*="admin"]').first().waitFor({ state: 'visible', timeout: 15000 });
+      adminUI = true;
+    } catch (e) {
+      adminUI = false;
+    }
     expect(adminUI, 'Admin dashboard UI not visible after login').toBeTruthy();
     await page.screenshot({ path: '/home/claude/sbi-tests/screenshots/admin_dashboard.png', fullPage: true });
   });
@@ -325,13 +355,26 @@ test.describe('3. Admin Panel', () => {
   test('3.5 — Admin can delete / deactivate a salesperson', async ({ page }) => {
     await loginAs(page, ADMIN);
     await page.waitForTimeout(2000);
-    const userNavSel = 'a:has-text("User"), a:has-text("Sales"), [href*="user"]';
+    // Sidebar uses buttons not anchor tags — match "Sales Persons" button
+    const userNavSel = 'button:has-text("Sales Persons"), button:has-text("Sales Person"), button:has-text("Sales"), a:has-text("Sales"), a:has-text("User"), [href*="user"]';
     const nav = page.locator(userNavSel).first();
-    if (await nav.isVisible({ timeout: 4000 }).catch(() => false)) await nav.click();
-    await page.waitForTimeout(1500);
-    const deleteSel = 'button:has-text("Delete"), button:has-text("Remove"), [class*="delete"], [aria-label*="delete" i]';
+    try {
+      await nav.waitFor({ state: 'visible', timeout: 5000 });
+      await nav.click();
+    } catch (e) {
+      console.warn('Could not click Sales Persons nav button');
+    }
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(2000);
+    const deleteSel = 'button:has-text("Delete"), button:has-text("Remove"), [class*="delete"], [aria-label*="delete" i], [title*="delete" i]';
     const deleteBtn = page.locator(deleteSel).first();
-    const exists = await deleteBtn.isVisible({ timeout: 4000 }).catch(() => false);
+    let exists = false;
+    try {
+      await deleteBtn.waitFor({ state: 'visible', timeout: 10000 });
+      exists = true;
+    } catch (e) {
+      exists = false;
+    }
     expect(exists, 'No delete/remove button found for users').toBeTruthy();
   });
 
@@ -411,7 +454,13 @@ test.describe('4. Salesperson Flow', () => {
     await page.waitForTimeout(2000);
     // Look for task / work / lead related UI
     const workSel = '[class*="task"], [class*="lead"], [class*="work"], [class*="target"], table, [class*="list"]';
-    const workVisible = await page.locator(workSel).first().isVisible({ timeout: 6000 }).catch(() => false);
+    let workVisible = false;
+    try {
+      await page.locator(workSel).first().waitFor({ state: 'visible', timeout: 15000 });
+      workVisible = true;
+    } catch (e) {
+      workVisible = false;
+    }
     expect(workVisible, 'No tasks/work content visible for salesperson').toBeTruthy();
     await page.screenshot({ path: '/home/claude/sbi-tests/screenshots/sales_work.png', fullPage: true });
   });

@@ -3,7 +3,7 @@ const { defineConfig, devices } = require('@playwright/test');
 
 module.exports = defineConfig({
   testDir: '.',
-  timeout: 30_000,
+  timeout: 60_000,
   retries: 1,
   workers: 1,          // sequential — important for shared state (admin creates sales user)
   reporter: [
