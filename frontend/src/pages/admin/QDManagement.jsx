@@ -8,8 +8,9 @@ import { Tabs } from '../../components/ui/Tabs';
 import { Button } from '../../components/ui/Button';
 import { qdApi } from '../../api/qdApi';
 import { useToast } from '../../context/ToastContext';
-import { CheckCircle2, XCircle, FileText, AlertCircle, Eye, FileDigit, Landmark, Briefcase, Download } from 'lucide-react';
+import { CheckCircle2, XCircle, FileText, AlertCircle, Eye, FileDigit, Landmark, Briefcase, Download, Loader2 } from 'lucide-react';
 import { cn } from '../../utils/cn';
+import api from '../../api/axiosInstance';
 
 export function QDManagementPage() {
   const [qds, setQds] = useState([]);
@@ -24,6 +25,30 @@ export function QDManagementPage() {
   ];
 
   const [selectedQD, setSelectedQD] = useState(null);
+  const [downloadingDoc, setDownloadingDoc] = useState(null); // tracks 'qdId-docIndex'
+
+  // Authenticated download — fetches as blob with JWT, forces save with original filename
+  const handleDownload = async (qdId, docIndex, originalname) => {
+    const key = `${qdId}-${docIndex}`;
+    setDownloadingDoc(key);
+    try {
+      const response = await api.get(`/qd/${qdId}/docs/${docIndex}/download`, {
+        responseType: 'blob',
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', originalname);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      addToast('error', 'Download Failed', 'Could not download the document.');
+    } finally {
+      setDownloadingDoc(null);
+    }
+  };
 
   const fetchQDs = async () => {
     setLoading(true);
@@ -273,18 +298,25 @@ export function QDManagementPage() {
               <div className="space-y-4">
                 <h4 className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Uploaded Documents ({selectedQD.documents?.length || 0})</h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                  {selectedQD.documents?.map((doc, i) => (
-                    <div key={i} className="flex items-center gap-3 p-3 border border-border-light dark:border-border-dark rounded-xl bg-white dark:bg-card-dark">
-                      {getDocIcon(doc.originalname)}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-bold truncate" title={doc.originalname}>{doc.originalname}</p>
-                        <p className="text-[10px] text-text-muted">{(doc.size / 1024).toFixed(1)} KB</p>
+                    {selectedQD.documents?.map((doc, i) => (
+                      <div key={i} className="flex items-center gap-3 p-3 border border-border-light dark:border-border-dark rounded-xl bg-white dark:bg-card-dark">
+                        {getDocIcon(doc.originalname)}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-bold truncate" title={doc.originalname}>{doc.originalname}</p>
+                          <p className="text-[10px] text-text-muted">{(doc.size / 1024).toFixed(1)} KB</p>
+                        </div>
+                        <button
+                          onClick={() => handleDownload(selectedQD._id, i, doc.originalname)}
+                          disabled={downloadingDoc === `${selectedQD._id}-${i}`}
+                          className="p-1.5 hover:bg-accent/10 rounded-lg text-accent transition-colors disabled:opacity-50"
+                          title={`Download ${doc.originalname}`}
+                        >
+                          {downloadingDoc === `${selectedQD._id}-${i}`
+                            ? <Loader2 className="w-4 h-4 animate-spin" />
+                            : <Download className="w-4 h-4" />}
+                        </button>
                       </div>
-                      <a href={doc.path} target="_blank" rel="noopener noreferrer" className="p-1.5 hover:bg-accent/10 rounded-lg text-accent transition-colors">
-                        <Download className="w-4 h-4" />
-                      </a>
-                    </div>
-                  ))}
+                    ))}
                 </div>
               </div>
             </div>

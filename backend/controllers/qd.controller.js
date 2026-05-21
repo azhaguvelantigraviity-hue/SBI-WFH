@@ -1,6 +1,7 @@
 const QD = require('../models/QD');
 const Lead = require('../models/Lead');
 const path = require('path');
+const fs = require('fs');
 
 // ─── @GET /api/qd ─────────────────────────────────────────────────────────────
 exports.getQDs = async (req, res) => {
@@ -139,4 +140,28 @@ exports.uploadDocs = async (req, res) => {
   await qd.save();
 
   res.json({ success: true, message: `${req.files.length} document(s) uploaded`, data: qd.documents });
+};
+
+// ─── @GET /api/qd/:id/docs/:docIndex/download ─────────────────────────────────
+exports.downloadDoc = async (req, res) => {
+  const qd = await QD.findById(req.params.id);
+  if (!qd) return res.status(404).json({ success: false, message: 'QD not found' });
+
+  const docIndex = parseInt(req.params.docIndex);
+  const doc = qd.documents?.[docIndex];
+  if (!doc) return res.status(404).json({ success: false, message: 'Document not found' });
+
+  // Build absolute path to the file on disk
+  const filePath = path.join(__dirname, '..', 'uploads', doc.filename);
+
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).json({ success: false, message: 'File not found on server' });
+  }
+
+  // Force browser to download with the original filename
+  res.download(filePath, doc.originalname, (err) => {
+    if (err && !res.headersSent) {
+      res.status(500).json({ success: false, message: 'Download failed' });
+    }
+  });
 };
