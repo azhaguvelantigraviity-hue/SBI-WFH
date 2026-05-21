@@ -13,26 +13,36 @@ const connectDB = async () => {
 
     const conn = await mongoose.connect(process.env.MONGO_URI, {
       serverSelectionTimeoutMS: 5000,
+      maxPoolSize: 10,          // allow up to 10 concurrent connections
+      bufferCommands: false,    // fail fast instead of silently queuing
     });
 
     console.log(`✅ MongoDB connected: ${conn.connection.host}`);
 
-    // Self-healing migration for call_status
+    // Self-healing migration: only runs if there are leads missing call_status
     try {
       const Lead = require('../models/Lead');
       const Call = require('../models/Call');
-      
-      const leadsWithoutCallStatus = await Lead.find({ call_status: { $exists: false } });
-      if (leadsWithoutCallStatus.length > 0) {
-        console.log(`🔧 Running call_status self-healing migration for ${leadsWithoutCallStatus.length} leads...`);
-        let migratedCount = 0;
+
+      // Quick count check — avoids loading all leads on every boot
+      const missingCount = await Lead.countDocuments({ call_status: { $exists: false } });
+      if (missingCount > 0) {
+        console.log(`🔧 Running call_status self-healing migration for ${missingCount} leads...`);
+        const leadsWithoutCallStatus = await Lead.find({ call_status: { $exists: false } }, '_id');
+        const bulkOps = [];
         for (const lead of leadsWithoutCallStatus) {
-          const latestCall = await Call.findOne({ lead: lead._id }).sort({ called_at: -1 });
-          lead.call_status = latestCall ? latestCall.status : 'pending';
-          await lead.save();
-          migratedCount++;
+          const latestCall = await Call.findOne({ lead: lead._id }, 'status').sort({ called_at: -1 }).lean();
+          bulkOps.push({
+            updateOne: {
+              filter: { _id: lead._id },
+              update: { $set: { call_status: latestCall ? latestCall.status : 'pending' } },
+            },
+          });
         }
-        console.log(`✅ Migrated ${migratedCount} leads successfully.`);
+        if (bulkOps.length > 0) {
+          await Lead.bulkWrite(bulkOps);
+          console.log(`✅ Migrated ${bulkOps.length} leads successfully.`);
+        }
       }
     } catch (migErr) {
       console.error('⚠️ Self-healing migration error:', migErr);

@@ -44,9 +44,8 @@ exports.login = async (req, res) => {
     return res.status(403).json({ success: false, message: 'Account suspended. Contact administrator.' });
   }
 
-  // Update last login
-  user.last_login = new Date();
-  await user.save();
+  // Update last login — use updateOne to skip the pre-save bcrypt hook
+  await User.updateOne({ _id: user._id }, { last_login: new Date() });
 
   const token = user.generateToken();
 

@@ -10,9 +10,15 @@ export function AuthProvider({ children }) {
   });
   const [loading, setLoading] = useState(false);
 
-  // Verify token on mount
+  // Verify token on mount — only if this is a page reload (not a fresh login)
+  // A fresh login has justLoggedIn=true in sessionStorage; skip the extra round-trip
   useEffect(() => {
     const verifyToken = async () => {
+      const justLoggedIn = sessionStorage.getItem('justLoggedIn');
+      if (justLoggedIn) {
+        sessionStorage.removeItem('justLoggedIn');
+        return; // Token was just issued — no need to re-verify
+      }
       if (auth?.token) {
         try {
           const res = await authApi.getMe();
@@ -42,6 +48,7 @@ export function AuthProvider({ children }) {
         };
         setAuth(authData);
         localStorage.setItem('auth', JSON.stringify(authData));
+        sessionStorage.setItem('justLoggedIn', 'true'); // skip getMe() on mount
         return { success: true };
       }
     } catch (err) {
