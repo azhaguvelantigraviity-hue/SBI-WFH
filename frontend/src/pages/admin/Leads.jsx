@@ -569,9 +569,11 @@ export function LeadsPage({ onNav }) {
                     if (r.status === 'qd_submitted' || r.status === 'dispatched' || r.status === 'closed' || r.status === 'rejected') {
                       return <Badge label="Generated" color="success" />;
                     }
+                    const currentStatus = getRowValue(r, 'status');
                     return (
                       <Button 
                         size="xs" 
+                        disabled={currentStatus !== 'Fresh'}
                         onClick={() => {
                           localStorage.setItem('selectedLeadId', r._id);
                           onNav('sp-qd');
