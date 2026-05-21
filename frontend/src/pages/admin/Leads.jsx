@@ -51,11 +51,16 @@ export function LeadsPage({ onNav }) {
     try {
       const res = await leadsApi.requestLeads();
       if (res.success) {
-        addToast('success', 'Request Sent', 'Your request for more leads has been sent to the admin.');
+        addToast('success', 'Request Applied Successfully', 'Your request for more leads has been sent to the admin.');
       }
     } catch (err) {
       const msg = err.response?.data?.message || err.response?.data?.error || err.message || 'Could not send lead request.';
-      addToast('error', 'Request Failed', msg);
+      // Show a pending-request message as info rather than error
+      if (msg.toLowerCase().includes('pending') || msg.toLowerCase().includes('already')) {
+        addToast('info', 'Request Already Pending', 'Your previous request is still under admin review.');
+      } else {
+        addToast('error', 'Request Failed', msg);
+      }
     } finally {
       setRequestingLeads(false);
     }
