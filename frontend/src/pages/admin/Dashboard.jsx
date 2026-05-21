@@ -218,7 +218,7 @@ export function AdminDashboard({ onNav }) {
                   </div>
                 </div>
               ))}
-              <Button variant="ghost" className="w-full mt-4 text-[11px] font-bold uppercase tracking-widest py-3">View Full Logs</Button>
+              <Button variant="ghost" className="w-full mt-4 text-[11px] font-bold uppercase tracking-widest py-3" onClick={() => onNav('calls')}>View Full Logs</Button>
             </div>
           </Card>
 
@@ -230,7 +230,7 @@ export function AdminDashboard({ onNav }) {
               <h3 className="font-fraunces font-bold text-xl leading-tight mb-2">Quarterly Target</h3>
               <p className="text-white/80 text-sm mb-6">You've reached 84% of the team goal for June 2025.</p>
               <ProgressBar value={84} color="white" size="lg" className="bg-white/20 mb-6" />
-              <Button variant="white" className="w-full text-accent">Manage Incentives</Button>
+              <Button variant="white" className="w-full text-accent" onClick={() => onNav('incentives')}>Manage Incentives</Button>
             </div>
           </Card>
         </div>
